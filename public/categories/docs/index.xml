@@ -2,31 +2,31 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
     <title>Docs on leo_something</title>
-    <link>http://leo1.cc:5555/categories/docs/</link>
+    <link>http://leo1.cc/categories/docs/</link>
     <description>Recent content in Docs on leo_something</description>
     <generator>Hugo -- 0.140.2</generator>
     <language>en-us</language>
     <lastBuildDate>Wed, 12 Jun 2024 12:00:00 +0000</lastBuildDate>
-    <atom:link href="http://leo1.cc:5555/categories/docs/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://leo1.cc/categories/docs/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Ret2dlresolve in 64bit binaries</title>
-      <link>http://leo1.cc:5555/posts/docs/ret2dlresolve/</link>
+      <link>http://leo1.cc/posts/docs/ret2dlresolve/</link>
       <pubDate>Wed, 12 Jun 2024 12:00:00 +0000</pubDate>
-      <guid>http://leo1.cc:5555/posts/docs/ret2dlresolve/</guid>
+      <guid>http://leo1.cc/posts/docs/ret2dlresolve/</guid>
       <description>Ret2dlresolve is a really powerful tecnique to use in pwn challenges (even tho it&amp;rsquo;s not frequently seen). It&amp;rsquo;s useful when we don&amp;rsquo;t have libc leaks or don&amp;rsquo;t know the libc version.</description>
     </item>
     <item>
       <title>DestructiveFarm setup for A/D CTFs</title>
-      <link>http://leo1.cc:5555/posts/docs/destructivefarm_setup/</link>
+      <link>http://leo1.cc/posts/docs/destructivefarm_setup/</link>
       <pubDate>Fri, 19 Apr 2024 12:01:00 +0000</pubDate>
-      <guid>http://leo1.cc:5555/posts/docs/destructivefarm_setup/</guid>
+      <guid>http://leo1.cc/posts/docs/destructivefarm_setup/</guid>
       <description>DestructiveFarm is a popular tool used in CTFs and what it does is running exploits every tick to retrieve flags and automatically submit them to the checker.</description>
     </item>
     <item>
       <title>Tulip setup for A/D CTFs</title>
-      <link>http://leo1.cc:5555/posts/docs/tulip_setup/</link>
+      <link>http://leo1.cc/posts/docs/tulip_setup/</link>
       <pubDate>Fri, 19 Apr 2024 12:00:00 +0000</pubDate>
-      <guid>http://leo1.cc:5555/posts/docs/tulip_setup/</guid>
+      <guid>http://leo1.cc/posts/docs/tulip_setup/</guid>
       <description>Tulip is a traffic analyzer tool made for A/D CTFs, this post walks you throught all the important steps requied to deploy Tulip painlessly (hopefully).</description>
     </item>
   </channel>

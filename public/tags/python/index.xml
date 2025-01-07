@@ -2,31 +2,31 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
     <title>Python on leo_something</title>
-    <link>http://leo1.cc:5555/tags/python/</link>
+    <link>http://leo1.cc/tags/python/</link>
     <description>Recent content in Python on leo_something</description>
     <generator>Hugo -- 0.140.2</generator>
     <language>en-us</language>
     <lastBuildDate>Mon, 03 Jun 2024 12:03:00 +0000</lastBuildDate>
-    <atom:link href="http://leo1.cc:5555/tags/python/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://leo1.cc/tags/python/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>CodegateJunior24 - Othernote</title>
-      <link>http://leo1.cc:5555/posts/writeups/codegatejunior24-othernote/</link>
+      <link>http://leo1.cc/posts/writeups/codegatejunior24-othernote/</link>
       <pubDate>Mon, 03 Jun 2024 12:03:00 +0000</pubDate>
-      <guid>http://leo1.cc:5555/posts/writeups/codegatejunior24-othernote/</guid>
+      <guid>http://leo1.cc/posts/writeups/codegatejunior24-othernote/</guid>
       <description>Simple web challenge about prototype pollution in python. It was part of the Codegate quals for juniors of 2024 (I made the writeup only because it was required to move to the finals).</description>
     </item>
     <item>
       <title>CodegateJunior24 - easy_reversing</title>
-      <link>http://leo1.cc:5555/posts/writeups/codegatejunior24-easy_reversing/</link>
+      <link>http://leo1.cc/posts/writeups/codegatejunior24-easy_reversing/</link>
       <pubDate>Mon, 03 Jun 2024 12:00:00 +0000</pubDate>
-      <guid>http://leo1.cc:5555/posts/writeups/codegatejunior24-easy_reversing/</guid>
+      <guid>http://leo1.cc/posts/writeups/codegatejunior24-easy_reversing/</guid>
       <description>Intresting python-compiled (pyc) reverse-engineering challenge from the Codegate quals for juniors of 2024.</description>
     </item>
     <item>
       <title>SnakeCTF23 - Stressful Reader</title>
-      <link>http://leo1.cc:5555/posts/writeups/snakectf23-stressful_reader/</link>
+      <link>http://leo1.cc/posts/writeups/snakectf23-stressful_reader/</link>
       <pubDate>Tue, 12 Dec 2023 12:00:00 +0000</pubDate>
-      <guid>http://leo1.cc:5555/posts/writeups/snakectf23-stressful_reader/</guid>
+      <guid>http://leo1.cc/posts/writeups/snakectf23-stressful_reader/</guid>
       <description>Pyjail challenge from SnakeCTF 2023.</description>
     </item>
   </channel>

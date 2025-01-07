@@ -2,17 +2,17 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
     <title>Custom Allocator on leo_something</title>
-    <link>http://leo1.cc:5555/tags/custom-allocator/</link>
+    <link>http://leo1.cc/tags/custom-allocator/</link>
     <description>Recent content in Custom Allocator on leo_something</description>
     <generator>Hugo -- 0.140.2</generator>
     <language>en-us</language>
     <lastBuildDate>Mon, 08 Jul 2024 12:00:00 +0000</lastBuildDate>
-    <atom:link href="http://leo1.cc:5555/tags/custom-allocator/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://leo1.cc/tags/custom-allocator/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>UIUCTF24 - Pwnymalloc</title>
-      <link>http://leo1.cc:5555/posts/writeups/uiuctf24-pwnymalloc/</link>
+      <link>http://leo1.cc/posts/writeups/uiuctf24-pwnymalloc/</link>
       <pubDate>Mon, 08 Jul 2024 12:00:00 +0000</pubDate>
-      <guid>http://leo1.cc:5555/posts/writeups/uiuctf24-pwnymalloc/</guid>
+      <guid>http://leo1.cc/posts/writeups/uiuctf24-pwnymalloc/</guid>
       <description>Pwnymalloc is a nice custom allocator challenge from UIUCTF 2024. The vulnerability was about an incorrect handling of the prev_size during consolitation.</description>
     </item>
   </channel>

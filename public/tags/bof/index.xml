@@ -2,17 +2,17 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
     <title>BOF on leo_something</title>
-    <link>http://leo1.cc:5555/tags/bof/</link>
+    <link>http://leo1.cc/tags/bof/</link>
     <description>Recent content in BOF on leo_something</description>
     <generator>Hugo -- 0.140.2</generator>
     <language>en-us</language>
     <lastBuildDate>Sat, 25 May 2024 12:00:00 +0000</lastBuildDate>
-    <atom:link href="http://leo1.cc:5555/tags/bof/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://leo1.cc/tags/bof/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>OpenECSC Round 3 - Log4x86</title>
-      <link>http://leo1.cc:5555/posts/writeups/openecscr3-log4x86/</link>
+      <link>http://leo1.cc/posts/writeups/openecscr3-log4x86/</link>
       <pubDate>Sat, 25 May 2024 12:00:00 +0000</pubDate>
-      <guid>http://leo1.cc:5555/posts/writeups/openecscr3-log4x86/</guid>
+      <guid>http://leo1.cc/posts/writeups/openecscr3-log4x86/</guid>
       <description>This challenge comes from the 3rd round of openECSC 2024. The challenge was really really interesting: the exploitation tecnique involved a buffer overflow through a really short format string vulnerability.</description>
     </item>
   </channel>

@@ -1,4 +1,4 @@
-baseURL: http://leo1.cc:5555/
+baseURL: http://leo1.cc/
 languageCode: en-us
 title: leo_something
 theme: ["PaperMod"]
@@ -44,6 +44,8 @@ params:
   socialIcons:
     - name: "discord"
       url: "https://discordapp.com/users/leo_something"
+    - name: "github"
+      url: "https://github.com/LeoSomething"
 
 menu:
   main:

@@ -2,80 +2,80 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
     <title>Writeups on leo_something</title>
-    <link>http://leo1.cc:5555/categories/writeups/</link>
+    <link>http://leo1.cc/categories/writeups/</link>
     <description>Recent content in Writeups on leo_something</description>
     <generator>Hugo -- 0.140.2</generator>
     <language>en-us</language>
     <lastBuildDate>Mon, 16 Sep 2024 12:00:00 +0000</lastBuildDate>
-    <atom:link href="http://leo1.cc:5555/categories/writeups/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://leo1.cc/categories/writeups/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>CTE24 - DiDUP</title>
-      <link>http://leo1.cc:5555/posts/writeups/cte24-didup/</link>
+      <link>http://leo1.cc/posts/writeups/cte24-didup/</link>
       <pubDate>Mon, 16 Sep 2024 12:00:00 +0000</pubDate>
-      <guid>http://leo1.cc:5555/posts/writeups/cte24-didup/</guid>
+      <guid>http://leo1.cc/posts/writeups/cte24-didup/</guid>
       <description>This is an hard pwn challenge I wrote for Compete Against TeamEurope, this CTF was part of the training for ECSC2024. The vulnerability is a double-free triggerable through a race condition. No bruteforce is needed.</description>
     </item>
     <item>
       <title>UIUCTF24 - Pwnymalloc</title>
-      <link>http://leo1.cc:5555/posts/writeups/uiuctf24-pwnymalloc/</link>
+      <link>http://leo1.cc/posts/writeups/uiuctf24-pwnymalloc/</link>
       <pubDate>Mon, 08 Jul 2024 12:00:00 +0000</pubDate>
-      <guid>http://leo1.cc:5555/posts/writeups/uiuctf24-pwnymalloc/</guid>
+      <guid>http://leo1.cc/posts/writeups/uiuctf24-pwnymalloc/</guid>
       <description>Pwnymalloc is a nice custom allocator challenge from UIUCTF 2024. The vulnerability was about an incorrect handling of the prev_size during consolitation.</description>
     </item>
     <item>
       <title>CodegateJunior24 - Othernote</title>
-      <link>http://leo1.cc:5555/posts/writeups/codegatejunior24-othernote/</link>
+      <link>http://leo1.cc/posts/writeups/codegatejunior24-othernote/</link>
       <pubDate>Mon, 03 Jun 2024 12:03:00 +0000</pubDate>
-      <guid>http://leo1.cc:5555/posts/writeups/codegatejunior24-othernote/</guid>
+      <guid>http://leo1.cc/posts/writeups/codegatejunior24-othernote/</guid>
       <description>Simple web challenge about prototype pollution in python. It was part of the Codegate quals for juniors of 2024 (I made the writeup only because it was required to move to the finals).</description>
     </item>
     <item>
       <title>CodegateJunior24 - Baby Heap</title>
-      <link>http://leo1.cc:5555/posts/writeups/codegatejunior24-baby_heap/</link>
+      <link>http://leo1.cc/posts/writeups/codegatejunior24-baby_heap/</link>
       <pubDate>Mon, 03 Jun 2024 12:02:00 +0000</pubDate>
-      <guid>http://leo1.cc:5555/posts/writeups/codegatejunior24-baby_heap/</guid>
+      <guid>http://leo1.cc/posts/writeups/codegatejunior24-baby_heap/</guid>
       <description>Heap challenge from the Codegate quals for juniors of 2024. The vulnerability was an heap overflow that enabled an attacker to gain overlapping chunks, therefore arb read and write.</description>
     </item>
     <item>
       <title>CodegateJunior24 - ai_warmup</title>
-      <link>http://leo1.cc:5555/posts/writeups/codegatejunior24-ai_warmup/</link>
+      <link>http://leo1.cc/posts/writeups/codegatejunior24-ai_warmup/</link>
       <pubDate>Mon, 03 Jun 2024 12:01:00 +0000</pubDate>
-      <guid>http://leo1.cc:5555/posts/writeups/codegatejunior24-ai_warmup/</guid>
+      <guid>http://leo1.cc/posts/writeups/codegatejunior24-ai_warmup/</guid>
       <description>Simple AI challenge from the Codegate quals for juniors of 2024 (I made the writeup only because it was required to move to the finals).</description>
     </item>
     <item>
       <title>CodegateJunior24 - easy_reversing</title>
-      <link>http://leo1.cc:5555/posts/writeups/codegatejunior24-easy_reversing/</link>
+      <link>http://leo1.cc/posts/writeups/codegatejunior24-easy_reversing/</link>
       <pubDate>Mon, 03 Jun 2024 12:00:00 +0000</pubDate>
-      <guid>http://leo1.cc:5555/posts/writeups/codegatejunior24-easy_reversing/</guid>
+      <guid>http://leo1.cc/posts/writeups/codegatejunior24-easy_reversing/</guid>
       <description>Intresting python-compiled (pyc) reverse-engineering challenge from the Codegate quals for juniors of 2024.</description>
     </item>
     <item>
       <title>OpenECSC Round 3 - Log4x86</title>
-      <link>http://leo1.cc:5555/posts/writeups/openecscr3-log4x86/</link>
+      <link>http://leo1.cc/posts/writeups/openecscr3-log4x86/</link>
       <pubDate>Sat, 25 May 2024 12:00:00 +0000</pubDate>
-      <guid>http://leo1.cc:5555/posts/writeups/openecscr3-log4x86/</guid>
+      <guid>http://leo1.cc/posts/writeups/openecscr3-log4x86/</guid>
       <description>This challenge comes from the 3rd round of openECSC 2024. The challenge was really really interesting: the exploitation tecnique involved a buffer overflow through a really short format string vulnerability.</description>
     </item>
     <item>
       <title>LaCTF24 - Glottem</title>
-      <link>http://leo1.cc:5555/posts/writeups/lactf24-glottem/</link>
+      <link>http://leo1.cc/posts/writeups/lactf24-glottem/</link>
       <pubDate>Fri, 23 Feb 2024 12:00:00 +0000</pubDate>
-      <guid>http://leo1.cc:5555/posts/writeups/lactf24-glottem/</guid>
+      <guid>http://leo1.cc/posts/writeups/lactf24-glottem/</guid>
       <description>This reverse-engineering challenge was part of LaCTF 2024. What we faced was a flag checker script written in both python and javascript. Sounds fun right?</description>
     </item>
     <item>
       <title>SnakeCTF23 - Stressful Reader</title>
-      <link>http://leo1.cc:5555/posts/writeups/snakectf23-stressful_reader/</link>
+      <link>http://leo1.cc/posts/writeups/snakectf23-stressful_reader/</link>
       <pubDate>Tue, 12 Dec 2023 12:00:00 +0000</pubDate>
-      <guid>http://leo1.cc:5555/posts/writeups/snakectf23-stressful_reader/</guid>
+      <guid>http://leo1.cc/posts/writeups/snakectf23-stressful_reader/</guid>
       <description>Pyjail challenge from SnakeCTF 2023.</description>
     </item>
     <item>
       <title>SaarCTF2023 - Pasteable</title>
-      <link>http://leo1.cc:5555/posts/writeups/saarctf23-pasteable/</link>
+      <link>http://leo1.cc/posts/writeups/saarctf23-pasteable/</link>
       <pubDate>Sun, 19 Nov 2023 12:00:00 +0000</pubDate>
-      <guid>http://leo1.cc:5555/posts/writeups/saarctf23-pasteable/</guid>
+      <guid>http://leo1.cc/posts/writeups/saarctf23-pasteable/</guid>
       <description>This challenge was part of the attack/defense SaarCTF of 2023. This is a web challenge written in PHP, where a wrong use of &amp;ldquo;==&amp;rdquo; led to a type juggling vulnerability.</description>
     </item>
   </channel>

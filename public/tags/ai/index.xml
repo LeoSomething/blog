@@ -2,17 +2,17 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
     <title>AI on leo_something</title>
-    <link>http://leo1.cc:5555/tags/ai/</link>
+    <link>http://leo1.cc/tags/ai/</link>
     <description>Recent content in AI on leo_something</description>
     <generator>Hugo -- 0.140.2</generator>
     <language>en-us</language>
     <lastBuildDate>Mon, 03 Jun 2024 12:01:00 +0000</lastBuildDate>
-    <atom:link href="http://leo1.cc:5555/tags/ai/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://leo1.cc/tags/ai/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>CodegateJunior24 - ai_warmup</title>
-      <link>http://leo1.cc:5555/posts/writeups/codegatejunior24-ai_warmup/</link>
+      <link>http://leo1.cc/posts/writeups/codegatejunior24-ai_warmup/</link>
       <pubDate>Mon, 03 Jun 2024 12:01:00 +0000</pubDate>
-      <guid>http://leo1.cc:5555/posts/writeups/codegatejunior24-ai_warmup/</guid>
+      <guid>http://leo1.cc/posts/writeups/codegatejunior24-ai_warmup/</guid>
       <description>Simple AI challenge from the Codegate quals for juniors of 2024 (I made the writeup only because it was required to move to the finals).</description>
     </item>
   </channel>
