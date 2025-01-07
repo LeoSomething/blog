@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>CodegateJunior24 - easy_reversing | leo_something</title>
+<meta name="keywords" content="rev, python">
+<meta name="description" content="Intresting python-compiled (pyc) reverse-engineering challenge from the Codegate quals for juniors of 2024.">
+<meta name="author" content="leo_something">
+<link rel="canonical" href="http://leo1.cc:5555/posts/writeups/codegatejunior24-easy_reversing/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.0c2131417d0b88f5928cdb2549da0d09bb391dae4fb3114012aa1349b07d4a44.css" integrity="sha256-DCExQX0LiPWSjNslSdoNCbs5Ha5PsxFAEqoTSbB9SkQ=" rel="preload stylesheet" as="style">
+<link rel="icon" href="http://leo1.cc:5555/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="http://leo1.cc:5555/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="http://leo1.cc:5555/favicon-32x32.png">
+<link rel="apple-touch-icon" href="http://leo1.cc:5555/apple-touch-icon.png">
+<link rel="mask-icon" href="http://leo1.cc:5555/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" hreflang="en" href="http://leo1.cc:5555/posts/writeups/codegatejunior24-easy_reversing/">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --code-block-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:url" content="http://leo1.cc:5555/posts/writeups/codegatejunior24-easy_reversing/">
+  <meta property="og:site_name" content="leo_something">
+  <meta property="og:title" content="CodegateJunior24 - easy_reversing">
+  <meta property="og:description" content="Intresting python-compiled (pyc) reverse-engineering challenge from the Codegate quals for juniors of 2024.">
+  <meta property="og:locale" content="en-us">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-06-03T12:00:00+00:00">
+    <meta property="article:modified_time" content="2024-06-03T12:00:00+00:00">
+    <meta property="article:tag" content="Rev">
+    <meta property="article:tag" content="Python">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="CodegateJunior24 - easy_reversing">
+<meta name="twitter:description" content="Intresting python-compiled (pyc) reverse-engineering challenge from the Codegate quals for juniors of 2024.">
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "Posts",
+      "item": "http://leo1.cc:5555/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "CodegateJunior24 - easy_reversing",
+      "item": "http://leo1.cc:5555/posts/writeups/codegatejunior24-easy_reversing/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "CodegateJunior24 - easy_reversing",
+  "name": "CodegateJunior24 - easy_reversing",
+  "description": "Intresting python-compiled (pyc) reverse-engineering challenge from the Codegate quals for juniors of 2024.",
+  "keywords": [
+    "rev", "python"
+  ],
+  "articleBody": "CHALLENGE OVERVIEW We are provided with a python script that uses a compiled pyc crypto library to check if our input is the flag.\nfrom calc import cipher def main(): user_input = input(\"Enter input: \") cipher_text = cipher(user_input.encode()) if cipher_text == b\"A\\xd3\\x87nb\\xb3\\x13\\xcdT\\x07\\xb0X\\x98\\xf1\\xdd{\\rG\\x029\\x146\\x1ah\\xd4\\xcc\\xd0\\xc4\\x14\\xc99'~\\xe8y\\x84\\x0cx-\\xbf\\\\\\xce\\xa8\\xbdh\\xb7\\x89\\x91\\x81i\\xc5Yj\\xeb\\xed\\xd1\\x0b\\xb4\\x8bZ%1.\\xa0w\\xb2\\x0e\\xb5\\x9d\\x16\\t\\xd0m\\xc0\\xf8\\x06\\xde\\xcd\": print(\"Correct!\") else: print(\"Fail!\") if __name__ == '__main__': main() Basically we need to decompile calc.pyc to understand how the encryption works and get the flag.\nSOLVE To decompile calc.pyc I used pycdc\npycdc calc.pyc The decompiled code made me think of RC4 encryption algorithm, based on this knowledge I fixed the decompiled code (which was not totally correct). The result was this:\nMOD = 256 def KSA(key): key_length = len(key) S = list(range(MOD)) j = 0 for i in range(MOD): j = (j + S[i] + key[i % key_length]) % MOD S[i], S[j] = S[j], S[i] return S def PRGA(S): i = 0 j = 0 while True: i = (i + 1) % MOD j = (j + S[i]) % MOD S[i], S[j] = S[j], S[i] K = S[(S[i] + S[j]) % MOD] yield K def get_keystream(key): S = KSA(key) return PRGA(S) def cipher(text): key = 'neMphDuJDhr19Bb' key = (lambda a: [ ord(c) ^ 48 for c in a ])(key) keystream = get_keystream(key) text = text[-2:] + text[:-2] res = [] for c in text: val = c ^ next(keystream) res.append(val) return bytes(res) calc.py\nAs you can see the key is known so we just need to write a function to decrypt the known ciphertext with the known key. This is a good task for chatGPT!\nMOD = 256 def KSA(key): key_length = len(key) S = list(range(MOD)) j = 0 for i in range(MOD): j = (j + S[i] + key[i % key_length]) % MOD S[i], S[j] = S[j], S[i] return S def PRGA(S): i = 0 j = 0 while True: i = (i + 1) % MOD j = (j + S[i]) % MOD S[i], S[j] = S[j], S[i] K = S[(S[i] + S[j]) % MOD] yield K def get_keystream(key): S = KSA(key) return PRGA(S) def decipher(ciphertext): key = 'neMphDuJDhr19Bb' key = (lambda a: [ ord(c) ^ 48 for c in a ])(key) keystream = get_keystream(key) decrypted = [] for c in ciphertext: val = c ^ next(keystream) decrypted.append(val) return bytes(decrypted) ciphertext = b\"A\\xd3\\x87nb\\xb3\\x13\\xcdT\\x07\\xb0X\\x98\\xf1\\xdd{\\rG\\x029\\x146\\x1ah\\xd4\\xcc\\xd0\\xc4\\x14\\xc99'~\\xe8y\\x84\\x0cx-\\xbf\\\\\\xce\\xa8\\xbdh\\xb7\\x89\\x91\\x81i\\xc5Yj\\xeb\\xed\\xd1\\x0b\\xb4\\x8bZ%1.\\xa0w\\xb2\\x0e\\xb5\\x9d\\x16\\t\\xd0m\\xc0\\xf8\\x06\\xde\\xcd\" plaintext = decipher(ciphertext) flag = (plaintext[2:] + plaintext[:2]).decode() print(flag) FLAG: codegate2024{da5d6bd71ff39f66b8b7200a92b0116b4f8e5e27d25d6119e63d3266bd4c8508}\n",
+  "wordCount" : "389",
+  "inLanguage": "en",
+  "datePublished": "2024-06-03T12:00:00Z",
+  "dateModified": "2024-06-03T12:00:00Z",
+  "author":{
+    "@type": "Person",
+    "name": "leo_something"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "http://leo1.cc:5555/posts/writeups/codegatejunior24-easy_reversing/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "leo_something",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "http://leo1.cc:5555/favicon.ico"
+    }
+  }
+}
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="http://leo1.cc:5555/" title="Home">
+                    <span>Home</span>
+                </a>
+            </li>
+            <li>
+                <a href="http://leo1.cc:5555/categories/" title="Categories">
+                    <span>Categories</span>
+                </a>
+            </li>
+            <li>
+                <a href="http://leo1.cc:5555/tags/" title="Tags">
+                    <span>Tags</span>
+                </a>
+            </li>
+            <li>
+                <a href="http://leo1.cc:5555/search/" title="Search (Alt &#43; /)" accesskey=/>
+                    <span>Search</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    
+    <h1 class="post-title entry-hint-parent">
+      CodegateJunior24 - easy_reversing
+    </h1>
+    <div class="post-meta"><span title='2024-06-03 12:00:00 +0000 UTC'>June 3, 2024</span>&nbsp;·&nbsp;leo_something
+
+</div>
+  </header>
+  <div class="tags" style="padding: 2px;">
+    <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+      
+      <a href="/tags/rev" class="custom-tag">
+        rev
+      </a>
+      
+      <a href="/tags/python" class="custom-tag">
+        python
+      </a>
+      
+    </div>
+  </div>
+
+  <div style="height: var(--gap);"></div> 
+  <div class="post-content"><h2 id="challenge-overview">CHALLENGE OVERVIEW<a hidden class="anchor" aria-hidden="true" href="#challenge-overview">#</a></h2>
+<p>We are provided with a python script that uses a compiled <code>pyc</code> crypto library to check if our input is the flag.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#f92672">from</span> calc <span style="color:#f92672">import</span> cipher
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">main</span>():
+</span></span><span style="display:flex;"><span>    user_input <span style="color:#f92672">=</span> input(<span style="color:#e6db74">&#34;Enter input: &#34;</span>)
+</span></span><span style="display:flex;"><span>    cipher_text <span style="color:#f92672">=</span> cipher(user_input<span style="color:#f92672">.</span>encode())
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> cipher_text <span style="color:#f92672">==</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;A</span><span style="color:#ae81ff">\xd3\x87</span><span style="color:#e6db74">nb</span><span style="color:#ae81ff">\xb3\x13\xcd</span><span style="color:#e6db74">T</span><span style="color:#ae81ff">\x07\xb0</span><span style="color:#e6db74">X</span><span style="color:#ae81ff">\x98\xf1\xdd</span><span style="color:#e6db74">{</span><span style="color:#ae81ff">\r</span><span style="color:#e6db74">G</span><span style="color:#ae81ff">\x02</span><span style="color:#e6db74">9</span><span style="color:#ae81ff">\x14</span><span style="color:#e6db74">6</span><span style="color:#ae81ff">\x1a</span><span style="color:#e6db74">h</span><span style="color:#ae81ff">\xd4\xcc\xd0\xc4\x14\xc9</span><span style="color:#e6db74">9&#39;~</span><span style="color:#ae81ff">\xe8</span><span style="color:#e6db74">y</span><span style="color:#ae81ff">\x84\x0c</span><span style="color:#e6db74">x-</span><span style="color:#ae81ff">\xbf\\\xce\xa8\xbd</span><span style="color:#e6db74">h</span><span style="color:#ae81ff">\xb7\x89\x91\x81</span><span style="color:#e6db74">i</span><span style="color:#ae81ff">\xc5</span><span style="color:#e6db74">Yj</span><span style="color:#ae81ff">\xeb\xed\xd1\x0b\xb4\x8b</span><span style="color:#e6db74">Z%1.</span><span style="color:#ae81ff">\xa0</span><span style="color:#e6db74">w</span><span style="color:#ae81ff">\xb2\x0e\xb5\x9d\x16\t\xd0</span><span style="color:#e6db74">m</span><span style="color:#ae81ff">\xc0\xf8\x06\xde\xcd</span><span style="color:#e6db74">&#34;</span>:
+</span></span><span style="display:flex;"><span>        print(<span style="color:#e6db74">&#34;Correct!&#34;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">else</span>:
+</span></span><span style="display:flex;"><span>        print(<span style="color:#e6db74">&#34;Fail!&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> __name__ <span style="color:#f92672">==</span> <span style="color:#e6db74">&#39;__main__&#39;</span>:
+</span></span><span style="display:flex;"><span>    main()
+</span></span></code></pre></div><p>Basically we need to decompile <code>calc.pyc</code> to understand how the encryption works and get the flag.</p>
+<hr>
+<h2 id="solve">SOLVE<a hidden class="anchor" aria-hidden="true" href="#solve">#</a></h2>
+<p>To decompile <code>calc.pyc</code> I used <a href="https://github.com/zrax/pycdc">pycdc</a></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>pycdc calc.pyc
+</span></span></code></pre></div><p>The decompiled code made me think of RC4 encryption algorithm, based on this knowledge I fixed the decompiled code (which was not totally correct).
+The result was this:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>MOD <span style="color:#f92672">=</span> <span style="color:#ae81ff">256</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">KSA</span>(key):
+</span></span><span style="display:flex;"><span>	key_length <span style="color:#f92672">=</span> len(key)
+</span></span><span style="display:flex;"><span>	S <span style="color:#f92672">=</span> list(range(MOD))
+</span></span><span style="display:flex;"><span>	j <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> i <span style="color:#f92672">in</span> range(MOD):
+</span></span><span style="display:flex;"><span>		j <span style="color:#f92672">=</span> (j <span style="color:#f92672">+</span> S[i] <span style="color:#f92672">+</span> key[i <span style="color:#f92672">%</span> key_length]) <span style="color:#f92672">%</span> MOD
+</span></span><span style="display:flex;"><span>		S[i], S[j] <span style="color:#f92672">=</span> S[j], S[i]
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> S
+</span></span><span style="display:flex;"><span>  
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">PRGA</span>(S):
+</span></span><span style="display:flex;"><span>	i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>	j <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">while</span> <span style="color:#66d9ef">True</span>:
+</span></span><span style="display:flex;"><span>		i <span style="color:#f92672">=</span> (i <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>) <span style="color:#f92672">%</span> MOD
+</span></span><span style="display:flex;"><span>		j <span style="color:#f92672">=</span> (j <span style="color:#f92672">+</span> S[i]) <span style="color:#f92672">%</span> MOD
+</span></span><span style="display:flex;"><span>		S[i], S[j] <span style="color:#f92672">=</span> S[j], S[i]
+</span></span><span style="display:flex;"><span>		K <span style="color:#f92672">=</span> S[(S[i] <span style="color:#f92672">+</span> S[j]) <span style="color:#f92672">%</span> MOD]
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">yield</span> K
+</span></span><span style="display:flex;"><span>  
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">get_keystream</span>(key):
+</span></span><span style="display:flex;"><span>	S <span style="color:#f92672">=</span> KSA(key)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> PRGA(S)
+</span></span><span style="display:flex;"><span>  
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">cipher</span>(text):
+</span></span><span style="display:flex;"><span>	key <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;neMphDuJDhr19Bb&#39;</span>
+</span></span><span style="display:flex;"><span>	key <span style="color:#f92672">=</span> (<span style="color:#66d9ef">lambda</span> a: [ ord(c) <span style="color:#f92672">^</span> <span style="color:#ae81ff">48</span> <span style="color:#66d9ef">for</span> c <span style="color:#f92672">in</span> a ])(key)
+</span></span><span style="display:flex;"><span>	keystream <span style="color:#f92672">=</span> get_keystream(key)
+</span></span><span style="display:flex;"><span>	text <span style="color:#f92672">=</span> text[<span style="color:#f92672">-</span><span style="color:#ae81ff">2</span>:] <span style="color:#f92672">+</span> text[:<span style="color:#f92672">-</span><span style="color:#ae81ff">2</span>]
+</span></span><span style="display:flex;"><span>	res <span style="color:#f92672">=</span> []
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> c <span style="color:#f92672">in</span> text:
+</span></span><span style="display:flex;"><span>		val <span style="color:#f92672">=</span> c <span style="color:#f92672">^</span> next(keystream)
+</span></span><span style="display:flex;"><span>		res<span style="color:#f92672">.</span>append(val)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> bytes(res)
+</span></span></code></pre></div><p><em>calc.py</em></p>
+<p>As you can see the key is known so we just need to write a function to <strong>decrypt the known ciphertext with the known key</strong>. This is a good task for chatGPT!</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>MOD <span style="color:#f92672">=</span> <span style="color:#ae81ff">256</span>
+</span></span><span style="display:flex;"><span> 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">KSA</span>(key):
+</span></span><span style="display:flex;"><span>	key_length <span style="color:#f92672">=</span> len(key)
+</span></span><span style="display:flex;"><span>	S <span style="color:#f92672">=</span> list(range(MOD))
+</span></span><span style="display:flex;"><span>	j <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> i <span style="color:#f92672">in</span> range(MOD):
+</span></span><span style="display:flex;"><span>		j <span style="color:#f92672">=</span> (j <span style="color:#f92672">+</span> S[i] <span style="color:#f92672">+</span> key[i <span style="color:#f92672">%</span> key_length]) <span style="color:#f92672">%</span> MOD
+</span></span><span style="display:flex;"><span>		S[i], S[j] <span style="color:#f92672">=</span> S[j], S[i]
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> S
+</span></span><span style="display:flex;"><span>  
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">PRGA</span>(S):
+</span></span><span style="display:flex;"><span>	i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>	j <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">while</span> <span style="color:#66d9ef">True</span>:
+</span></span><span style="display:flex;"><span>		i <span style="color:#f92672">=</span> (i <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>) <span style="color:#f92672">%</span> MOD
+</span></span><span style="display:flex;"><span>		j <span style="color:#f92672">=</span> (j <span style="color:#f92672">+</span> S[i]) <span style="color:#f92672">%</span> MOD
+</span></span><span style="display:flex;"><span>		S[i], S[j] <span style="color:#f92672">=</span> S[j], S[i]
+</span></span><span style="display:flex;"><span>		K <span style="color:#f92672">=</span> S[(S[i] <span style="color:#f92672">+</span> S[j]) <span style="color:#f92672">%</span> MOD]
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">yield</span> K
+</span></span><span style="display:flex;"><span>  
+</span></span><span style="display:flex;"><span> 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">get_keystream</span>(key):
+</span></span><span style="display:flex;"><span>	S <span style="color:#f92672">=</span> KSA(key)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> PRGA(S)
+</span></span><span style="display:flex;"><span>  
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">decipher</span>(ciphertext):
+</span></span><span style="display:flex;"><span>	key <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;neMphDuJDhr19Bb&#39;</span>
+</span></span><span style="display:flex;"><span>	key <span style="color:#f92672">=</span> (<span style="color:#66d9ef">lambda</span> a: [ ord(c) <span style="color:#f92672">^</span> <span style="color:#ae81ff">48</span> <span style="color:#66d9ef">for</span> c <span style="color:#f92672">in</span> a ])(key)
+</span></span><span style="display:flex;"><span>	keystream <span style="color:#f92672">=</span> get_keystream(key)
+</span></span><span style="display:flex;"><span>	decrypted <span style="color:#f92672">=</span> []
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> c <span style="color:#f92672">in</span> ciphertext:
+</span></span><span style="display:flex;"><span>		val <span style="color:#f92672">=</span> c <span style="color:#f92672">^</span> next(keystream)
+</span></span><span style="display:flex;"><span>		decrypted<span style="color:#f92672">.</span>append(val)
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> bytes(decrypted)
+</span></span><span style="display:flex;"><span>  
+</span></span><span style="display:flex;"><span>ciphertext <span style="color:#f92672">=</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;A</span><span style="color:#ae81ff">\xd3\x87</span><span style="color:#e6db74">nb</span><span style="color:#ae81ff">\xb3\x13\xcd</span><span style="color:#e6db74">T</span><span style="color:#ae81ff">\x07\xb0</span><span style="color:#e6db74">X</span><span style="color:#ae81ff">\x98\xf1\xdd</span><span style="color:#e6db74">{</span><span style="color:#ae81ff">\r</span><span style="color:#e6db74">G</span><span style="color:#ae81ff">\x02</span><span style="color:#e6db74">9</span><span style="color:#ae81ff">\x14</span><span style="color:#e6db74">6</span><span style="color:#ae81ff">\x1a</span><span style="color:#e6db74">h</span><span style="color:#ae81ff">\xd4\xcc\xd0\xc4\x14\xc9</span><span style="color:#e6db74">9&#39;~</span><span style="color:#ae81ff">\xe8</span><span style="color:#e6db74">y</span><span style="color:#ae81ff">\x84\x0c</span><span style="color:#e6db74">x-</span><span style="color:#ae81ff">\xbf\\\xce\xa8\xbd</span><span style="color:#e6db74">h</span><span style="color:#ae81ff">\xb7\x89\x91\x81</span><span style="color:#e6db74">i</span><span style="color:#ae81ff">\xc5</span><span style="color:#e6db74">Yj</span><span style="color:#ae81ff">\xeb\xed\xd1\x0b\xb4\x8b</span><span style="color:#e6db74">Z%1.</span><span style="color:#ae81ff">\xa0</span><span style="color:#e6db74">w</span><span style="color:#ae81ff">\xb2\x0e\xb5\x9d\x16\t\xd0</span><span style="color:#e6db74">m</span><span style="color:#ae81ff">\xc0\xf8\x06\xde\xcd</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>plaintext <span style="color:#f92672">=</span> decipher(ciphertext)
+</span></span><span style="display:flex;"><span>flag <span style="color:#f92672">=</span> (plaintext[<span style="color:#ae81ff">2</span>:] <span style="color:#f92672">+</span> plaintext[:<span style="color:#ae81ff">2</span>])<span style="color:#f92672">.</span>decode()
+</span></span><span style="display:flex;"><span>print(flag)
+</span></span></code></pre></div><p><strong>FLAG</strong>:
+codegate2024{da5d6bd71ff39f66b8b7200a92b0116b4f8e5e27d25d6119e63d3266bd4c8508}</p>
+
+
+  </div>
+
+  <footer class="post-footer">
+  </footer>
+</article>
+    </main>
+    
+<footer class="footer">
+        <span>&copy; 2025 <a href="http://leo1.cc:5555/">leo_something</a></span> · 
+
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a><script src="https://cdnjs.cloudflare.com/ajax/libs/medium-zoom/1.0.6/medium-zoom.min.js" integrity="sha512-N9IJRoc3LaP3NDoiGkcPa4gG94kapGpaA5Zq9/Dr04uf5TbLFU5q0o8AbRhLKUUlp8QFS2u7S+Yti0U7QtuZvQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+<script>
+    const images = Array.from(document.querySelectorAll(".post-content img"));
+    images.forEach(img => {
+        mediumZoom(img, {
+            margin: 0,  
+            scrollOffset: 40,  
+            container: null,  
+            template: null,  
+            background: 'rgba(0, 0, 0, 0.8)'
+        });
+    });
+</script>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerHTML = 'copy';
+
+        function copyingDone() {
+            copybutton.innerHTML = 'copied!';
+            setTimeout(() => {
+                copybutton.innerHTML = 'copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>

@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>OpenECSC Round 3 - Log4x86 | leo_something</title>
+<meta name="keywords" content="pwn, format string, BOF">
+<meta name="description" content="This challenge comes from the 3rd round of openECSC 2024. The challenge was really really interesting: the exploitation tecnique involved a buffer overflow through a really short format string vulnerability.">
+<meta name="author" content="leo_something">
+<link rel="canonical" href="http://leo1.cc:5555/posts/writeups/openecscr3-log4x86/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.0c2131417d0b88f5928cdb2549da0d09bb391dae4fb3114012aa1349b07d4a44.css" integrity="sha256-DCExQX0LiPWSjNslSdoNCbs5Ha5PsxFAEqoTSbB9SkQ=" rel="preload stylesheet" as="style">
+<link rel="icon" href="http://leo1.cc:5555/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="http://leo1.cc:5555/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="http://leo1.cc:5555/favicon-32x32.png">
+<link rel="apple-touch-icon" href="http://leo1.cc:5555/apple-touch-icon.png">
+<link rel="mask-icon" href="http://leo1.cc:5555/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" hreflang="en" href="http://leo1.cc:5555/posts/writeups/openecscr3-log4x86/">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --code-block-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:url" content="http://leo1.cc:5555/posts/writeups/openecscr3-log4x86/">
+  <meta property="og:site_name" content="leo_something">
+  <meta property="og:title" content="OpenECSC Round 3 - Log4x86">
+  <meta property="og:description" content="This challenge comes from the 3rd round of openECSC 2024. The challenge was really really interesting: the exploitation tecnique involved a buffer overflow through a really short format string vulnerability.">
+  <meta property="og:locale" content="en-us">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-25T12:00:00+00:00">
+    <meta property="article:modified_time" content="2024-05-25T12:00:00+00:00">
+    <meta property="article:tag" content="Pwn">
+    <meta property="article:tag" content="Format String">
+    <meta property="article:tag" content="BOF">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="OpenECSC Round 3 - Log4x86">
+<meta name="twitter:description" content="This challenge comes from the 3rd round of openECSC 2024. The challenge was really really interesting: the exploitation tecnique involved a buffer overflow through a really short format string vulnerability.">
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "Posts",
+      "item": "http://leo1.cc:5555/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "OpenECSC Round 3 - Log4x86",
+      "item": "http://leo1.cc:5555/posts/writeups/openecscr3-log4x86/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "OpenECSC Round 3 - Log4x86",
+  "name": "OpenECSC Round 3 - Log4x86",
+  "description": "This challenge comes from the 3rd round of openECSC 2024. The challenge was really really interesting: the exploitation tecnique involved a buffer overflow through a really short format string vulnerability.",
+  "keywords": [
+    "pwn", "format string", "BOF"
+  ],
+  "articleBody": "CHALLENGE DESCRIPTION Logging data from your application is very important. This is why we are logging ABSOLUTELY EVERYTHING in this small calculator app.\nnc log4x86.challs.open.ecsc2024.it 38019\nTABLE OF CONTENTS BINARY OVERVIEW REVERSE ENGINEERING EXPLOITATION First steps Initial ideas Bypassing the whitelist Arbitrary write and ret2libc SUMMARY FINAL THOUGHTS BINARY OVERVIEW Log4x86 is an x86 64 bit binary which consists in a simple calculator app wrapped with basic logging functionalities, such as:\nchanging log level changing log format resetting log format Reading the decompiled code we can easily notice the intense use of printf and snprinf, which might be vulnerable to format string attacks.\nREVERSE ENGINEERING Decompiling the binary with Ida we can get a pretty neat main function. It’s basically a while loop which gets our input with a well implemented fgets, then it parses it with the following instruction:\n__isoc99_sscanf(command, \"%63s %31s %31s %31s\", cmd, arg1, arg2, arg3); Then we have a series of if statements that call different functions according to the command we inputted. Each command is logged to stdout with the following code:\nif (GLOBAL_LOG_LEVEL \u003c= 1 ) { if ( OLD_LOG != 999 ) { logLevel = logLevelResolver(1u, \"reset_log_format\"); sprintf( log_msg_base, LOG_FORMAT, logLevel, \"logloglog.c\", 999LL, \"Reset log format to: '%s'\" ); OLD_LOG = 999; } printf(log_msg_base, LOG_FORMAT); } This basically writes a log message with the format string specified by LOG_FORMAT but, as I specified earlier, changing LOG_FORMAT is a functionality provided by the program itself so we could ideally inject a format-string exploit into it and then trigger it with the next snprintf. Fortunately or unfortunately (choice to you), this is not that easy, there are some checks and constraints to bypass:\nThe new LOG_FORMAT can be max 10 char long (including the NULL byte) LOG_FORMAT cannot contain $ and * There is also a regex check, but we don’t really care about it Another great thing to notice is that log_msg_base is changed only the first time a specific log is triggered. In short, if we trigger the same command multiple times in a row, only the first time log_msg_base will change. Keep this in mind, it will come in useful.\nEXPLOITATION First steps First thing I like to do before pwning is running pwninit to patch the binary with the correct version of libc and create a Pwntools template script.\nTo get the correct libc version used by the remote we can pull the docker image specified in docker-compose.yml and then extract libc.so.6 from it.\n$ docker pull cybersecnatlab/challenge-jail@sha256:7bf77225063b039960f654307cf5d6f977f892ff548606357a2e8fe8067d0a88 REPOSITORY TAG IMAGE ID CREATED SIZE cybersecnatlab/challenge-jail 02becdec589e 8 months ago 139MB $ docker cp \"$(docker create 02becdec589e):/usr/lib/x86_64-linux-gnu/libc.so.6\" \"./\" Successfully copied 2.22MB to ./ Then run pwninit with\n$ pwninit --bin=logloglog --libc=./libc.so.6 Another good practice is to run checksec on the binary\n$ checksec --file=logloglog_patched RELRO STACK CANARY NX PIE Partial RELRO Canary found NX enabled PIE enabled Mhhh, Partial RELRO… GOT override might be possible.\nInitial ideas After finding the format string I tried some basic payloads like %pand leaked ASLR base address, but I couldn’t do anything more seeing that I had only 9 chars to write my payload.\nMessing around with the payload I figured out that we could trigger a sort of “second-order” format string attack by setting the log format to something like %%p. This transforms into a %p after the sprintf and then is used by printf, with this technique I leaked the stack.\n$ ./logloglog_patched \u003e change_log_format %%p [DBG-logloglog.c:103] Successfully read some bytes 0x597c3dd200f0 \u003e aaaaaaa 0x7ffeaa48a0e0 Spoiler: this won’t be really useful :(\nAs we cannot use $ we can only interact with the first 3 parameters of printf, which are contained respectively in rsi, rdx and rcx. I inspected these register before every call to printf and sadly found out that there are no useful pointers to tamper in there.\nBypassing the whitelist After another few ours of trying random stuff and thinking hard I noticed that the log_msg_base global variable (which is the string where sprintf writes) is right on top of the command global variable (which contains our input taken by fgets), so changing the log format to %256c would cause log_msg_base to overflow into command, the next command will then override the terminator NULL byte of log_msg_base, causing it to be longer than 9 chars and bypass the whitelist.\nMemory after %256c:\n0x555555558120 :\t0x2020202020202020\t0x2020202020202020 0x555555558130 :\t0x2020202020202020\t0x2020202020202020 0x555555558140 :\t0x2020202020202020\t0x2020202020202020 0x555555558150 :\t0x2020202020202020\t0x2020202020202020 0x555555558160 :\t0x2020202020202020\t0x2020202020202020 0x555555558170 :\t0x2020202020202020\t0x2020202020202020 0x555555558180 :\t0x2020202020202020\t0x2020202020202020 0x555555558190 :\t0x2020202020202020\t0x2020202020202020 0x5555555581a0 :\t0x2020202020202020\t0x2020202020202020 0x5555555581b0 :\t0x2020202020202020\t0x2020202020202020 0x5555555581c0 :\t0x2020202020202020\t0x2020202020202020 0x5555555581d0 :\t0x2020202020202020\t0x2020202020202020 0x5555555581e0 :\t0x2020202020202020\t0x2020202020202020 0x5555555581f0 :\t0x2020202020202020\t0x2020202020202020 0x555555558200 :\t0x2020202020202020\t0x2020202020202020 0x555555558210 :\t0x2020202020202020\t0x1c20202020202020 0x555555558220 :\t0x6c5f65676e61000a\t0x616d726f665f676f From here it’s all straight forward, we can write a format string as a command, thus overriding the NULL byte of log_msg_base (effectively enlarging log_msg_base itself). When printf(log_msg_base) is called it will trigger our format string which, at this point, has only one constraint: it can contain only one pointer (because the string ends with a NULL byte).\nArbitrary write and ret2libc Now we can leak libc and think about how to achieve ACE. My first idea was to override something on the GOT with a onegadget, but I didn’t manage to find a GOT entry that satisfied the constraints of any onegadget. This was not a great moment, because I realized that I had to create a ROP chain on the stack with format strings. After a good half-an-hour of pain I managed to ret2libc and flagged!\nIN SUMMARY Overflow log_msg_base into command with %256c Override log_msg_base’s NULL byte with the next command, enlarging log_msg_base (our format string). Next commands will be appended to log_msg_base. Leak libc with %37$p Take a deep breath Write a ret2libc payload on the stack with the format string (one pointer per command due to NULL bytes) FINAL THOUGHTS This was a really painful fun challenge where I learned more about printf and buffer overflows through format string attacks.\n",
+  "wordCount" : "1005",
+  "inLanguage": "en",
+  "datePublished": "2024-05-25T12:00:00Z",
+  "dateModified": "2024-05-25T12:00:00Z",
+  "author":{
+    "@type": "Person",
+    "name": "leo_something"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "http://leo1.cc:5555/posts/writeups/openecscr3-log4x86/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "leo_something",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "http://leo1.cc:5555/favicon.ico"
+    }
+  }
+}
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="http://leo1.cc:5555/" title="Home">
+                    <span>Home</span>
+                </a>
+            </li>
+            <li>
+                <a href="http://leo1.cc:5555/categories/" title="Categories">
+                    <span>Categories</span>
+                </a>
+            </li>
+            <li>
+                <a href="http://leo1.cc:5555/tags/" title="Tags">
+                    <span>Tags</span>
+                </a>
+            </li>
+            <li>
+                <a href="http://leo1.cc:5555/search/" title="Search (Alt &#43; /)" accesskey=/>
+                    <span>Search</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    
+    <h1 class="post-title entry-hint-parent">
+      OpenECSC Round 3 - Log4x86
+    </h1>
+    <div class="post-meta"><span title='2024-05-25 12:00:00 +0000 UTC'>May 25, 2024</span>&nbsp;·&nbsp;leo_something
+
+</div>
+  </header>
+  <div class="tags" style="padding: 2px;">
+    <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+      
+      <a href="/tags/pwn" class="custom-tag">
+        pwn
+      </a>
+      
+      <a href="/tags/format-string" class="custom-tag">
+        format string
+      </a>
+      
+      <a href="/tags/bof" class="custom-tag">
+        BOF
+      </a>
+      
+    </div>
+  </div>
+
+  <div style="height: var(--gap);"></div> 
+  <div class="post-content"><h2 id="challenge-description">CHALLENGE DESCRIPTION<a hidden class="anchor" aria-hidden="true" href="#challenge-description">#</a></h2>
+<p>Logging data from your application is very important. This is why we are logging ABSOLUTELY EVERYTHING in this small calculator app.</p>
+<p><code>nc log4x86.challs.open.ecsc2024.it 38019</code></p>
+<hr>
+<h2 id="table-of-contents">TABLE OF CONTENTS<a hidden class="anchor" aria-hidden="true" href="#table-of-contents">#</a></h2>
+<ul>
+<li><a href="#binary-overview">BINARY OVERVIEW</a></li>
+<li><a href="#reverse-engineering">REVERSE ENGINEERING</a></li>
+<li><a href="#exploitation">EXPLOITATION</a>
+<ul>
+<li><a href="#first-steps">First steps</a></li>
+<li><a href="#initial-ideas">Initial ideas</a></li>
+<li><a href="#bypassing-the-whitelist">Bypassing the whitelist</a></li>
+<li><a href="#arbitrary-write-and-ret2libc">Arbitrary write and ret2libc</a></li>
+</ul>
+</li>
+<li><a href="#in-summary">SUMMARY</a></li>
+<li><a href="#final-thoughts">FINAL THOUGHTS</a></li>
+</ul>
+<hr>
+<h2 id="binary-overview">BINARY OVERVIEW<a hidden class="anchor" aria-hidden="true" href="#binary-overview">#</a></h2>
+<p>Log4x86 is an x86 64 bit binary which consists in a simple calculator app wrapped with basic logging functionalities, such as:</p>
+<ul>
+<li>changing log level</li>
+<li>changing log format</li>
+<li>resetting log format</li>
+</ul>
+<p>Reading the decompiled code we can easily notice the intense use of <code>printf</code> and <code>snprinf</code>, which might be vulnerable to format string attacks.</p>
+<hr>
+<h2 id="reverse-engineering">REVERSE ENGINEERING<a hidden class="anchor" aria-hidden="true" href="#reverse-engineering">#</a></h2>
+<p>Decompiling the binary with Ida we can get a pretty neat <code>main</code> function.
+It&rsquo;s basically a while loop which gets our input with a well implemented <code>fgets</code>, then it parses it with the following instruction:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#a6e22e">__isoc99_sscanf</span>(command, <span style="color:#e6db74">&#34;%63s %31s %31s %31s&#34;</span>, cmd, arg1, arg2, arg3);
+</span></span></code></pre></div><p>Then we have a series of if statements that call different functions according to the command we inputted.
+Each command is logged to stdout with the following code:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">if</span> (GLOBAL_LOG_LEVEL <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span> ) {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> ( OLD_LOG <span style="color:#f92672">!=</span> <span style="color:#ae81ff">999</span> ) {
+</span></span><span style="display:flex;"><span>		logLevel <span style="color:#f92672">=</span> <span style="color:#a6e22e">logLevelResolver</span>(<span style="color:#ae81ff">1u</span>, <span style="color:#e6db74">&#34;reset_log_format&#34;</span>);
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">sprintf</span>(
+</span></span><span style="display:flex;"><span>			  log_msg_base, 
+</span></span><span style="display:flex;"><span>			  LOG_FORMAT, 
+</span></span><span style="display:flex;"><span>			  logLevel, 
+</span></span><span style="display:flex;"><span>			  <span style="color:#e6db74">&#34;logloglog.c&#34;</span>, 
+</span></span><span style="display:flex;"><span>			  <span style="color:#ae81ff">999LL</span>, 
+</span></span><span style="display:flex;"><span>			  <span style="color:#e6db74">&#34;Reset log format to: &#39;%s&#39;&#34;</span>
+</span></span><span style="display:flex;"><span>			);
+</span></span><span style="display:flex;"><span>		OLD_LOG <span style="color:#f92672">=</span> <span style="color:#ae81ff">999</span>;
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">printf</span>(log_msg_base, LOG_FORMAT);
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>This basically writes a log message with the format string specified by <code>LOG_FORMAT</code> but, as I specified earlier, changing <code>LOG_FORMAT</code> is a functionality provided by the program itself so we could ideally inject a format-string exploit into it and then trigger it with the next <code>snprintf</code>. Fortunately or unfortunately (choice to you), this is not that easy, there are some checks and constraints to bypass:</p>
+<ol>
+<li>The new <code>LOG_FORMAT</code> can be max 10 char long (including the NULL byte)</li>
+<li><code>LOG_FORMAT</code> cannot contain <code>$</code> and <code>*</code></li>
+<li>There is also a regex check, but we don&rsquo;t really care about it</li>
+</ol>
+<p>Another great thing to notice is that <code>log_msg_base</code> is changed only the first time a specific log is triggered. In short, if we trigger the same command multiple times in a row, only the first time <code>log_msg_base</code> will change. Keep this in mind, it will come in useful.</p>
+<hr>
+<h2 id="exploitation">EXPLOITATION<a hidden class="anchor" aria-hidden="true" href="#exploitation">#</a></h2>
+<h3 id="first-steps">First steps<a hidden class="anchor" aria-hidden="true" href="#first-steps">#</a></h3>
+<p>First thing I like to do before pwning is running <code>pwninit</code> to patch the binary with the correct version of libc and create a Pwntools template script.</p>
+<p>To get the correct libc version used by the remote we can pull the docker image specified in <code>docker-compose.yml</code> and then extract <code>libc.so.6</code> from it.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ docker pull cybersecnatlab/challenge-jail@sha256:7bf77225063b039960f654307cf5d6f977f892ff548606357a2e8fe8067d0a88
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>REPOSITORY                      TAG       IMAGE ID       CREATED         SIZE
+</span></span><span style="display:flex;"><span>cybersecnatlab/challenge-jail   &lt;none&gt;    02becdec589e   <span style="color:#ae81ff">8</span> months ago    139MB
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>$ docker cp <span style="color:#e6db74">&#34;</span><span style="color:#66d9ef">$(</span>docker create 02becdec589e<span style="color:#66d9ef">)</span><span style="color:#e6db74">:/usr/lib/x86_64-linux-gnu/libc.so.6&#34;</span> <span style="color:#e6db74">&#34;./&#34;</span>
+</span></span><span style="display:flex;"><span>Successfully copied 2.22MB to ./
+</span></span></code></pre></div><p>Then run pwninit with</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ pwninit --bin<span style="color:#f92672">=</span>logloglog --libc<span style="color:#f92672">=</span>./libc.so.6
+</span></span></code></pre></div><p>Another good practice is to run <code>checksec</code> on the binary</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ checksec --file<span style="color:#f92672">=</span>logloglog_patched
+</span></span><span style="display:flex;"><span>RELRO           STACK CANARY      NX            PIE
+</span></span><span style="display:flex;"><span>Partial RELRO   Canary found      NX enabled    PIE enabled
+</span></span></code></pre></div><p>Mhhh, Partial RELRO&hellip; GOT override might be possible.</p>
+<h3 id="initial-ideas">Initial ideas<a hidden class="anchor" aria-hidden="true" href="#initial-ideas">#</a></h3>
+<p>After finding the format string I tried some basic payloads like <code>%p</code>and leaked ASLR base address, but I couldn&rsquo;t do anything more seeing that I had only 9 chars to write my payload.</p>
+<p>Messing around with the payload I figured out that we could trigger a sort of &ldquo;second-order&rdquo; format string attack by setting the log format to something like <code>%%p</code>.
+This transforms into a <code>%p</code> after the <code>sprintf</code> and then is used by <code>printf</code>, with this technique I leaked the stack.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ ./logloglog_patched
+</span></span><span style="display:flex;"><span>&gt; change_log_format
+</span></span><span style="display:flex;"><span>%%p
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>DBG-logloglog.c:103<span style="color:#f92672">]</span> Successfully read some bytes
+</span></span><span style="display:flex;"><span>0x597c3dd200f0
+</span></span><span style="display:flex;"><span>&gt; aaaaaaa
+</span></span><span style="display:flex;"><span>0x7ffeaa48a0e0
+</span></span></code></pre></div><p>Spoiler: this won&rsquo;t be really useful :(</p>
+<p>As we cannot use <code>$</code> we can only interact with the first 3 parameters of printf, which are contained respectively in <code>rsi</code>, <code>rdx</code> and <code>rcx</code>. I inspected these register before every call to printf and sadly found out that there are no useful pointers to tamper in there.</p>
+<h3 id="bypassing-the-whitelist">Bypassing the whitelist<a hidden class="anchor" aria-hidden="true" href="#bypassing-the-whitelist">#</a></h3>
+<p>After another few ours of trying random stuff and thinking hard I noticed that the <code>log_msg_base</code> global variable (which is the string where sprintf writes) is right on top of the <code>command</code> global variable (which contains our input taken by fgets), so changing the log format to <code>%256c</code> would cause <code>log_msg_base</code> to overflow into <code>command</code>, the next command will then override the terminator NULL byte of <code>log_msg_base</code>, causing it to be longer than 9 chars and bypass the whitelist.</p>
+<p><em>Memory after <code>%256c</code>:</em></p>
+<pre tabindex="0"><code>0x555555558120 &lt;log_msg_base&gt;:	    0x2020202020202020	0x2020202020202020
+0x555555558130 &lt;log_msg_base+16&gt;:	0x2020202020202020	0x2020202020202020
+0x555555558140 &lt;log_msg_base+32&gt;:	0x2020202020202020	0x2020202020202020
+0x555555558150 &lt;log_msg_base+48&gt;:	0x2020202020202020	0x2020202020202020
+0x555555558160 &lt;log_msg_base+64&gt;:	0x2020202020202020	0x2020202020202020
+0x555555558170 &lt;log_msg_base+80&gt;:	0x2020202020202020	0x2020202020202020
+0x555555558180 &lt;log_msg_base+96&gt;:	0x2020202020202020	0x2020202020202020
+0x555555558190 &lt;log_msg_base+112&gt;:	0x2020202020202020	0x2020202020202020
+0x5555555581a0 &lt;log_msg_base+128&gt;:	0x2020202020202020	0x2020202020202020
+0x5555555581b0 &lt;log_msg_base+144&gt;:	0x2020202020202020	0x2020202020202020
+0x5555555581c0 &lt;log_msg_base+160&gt;:	0x2020202020202020	0x2020202020202020
+0x5555555581d0 &lt;log_msg_base+176&gt;:	0x2020202020202020	0x2020202020202020
+0x5555555581e0 &lt;log_msg_base+192&gt;:	0x2020202020202020	0x2020202020202020
+0x5555555581f0 &lt;log_msg_base+208&gt;:	0x2020202020202020	0x2020202020202020
+0x555555558200 &lt;log_msg_base+224&gt;:	0x2020202020202020	0x2020202020202020
+0x555555558210 &lt;log_msg_base+240&gt;:	0x2020202020202020	0x1c20202020202020
+0x555555558220 &lt;command&gt;:	        0x6c5f65676e61000a	0x616d726f665f676f
+</code></pre><p>From here it&rsquo;s all straight forward, we can write a format string as a command, thus overriding the NULL byte of <code>log_msg_base</code> (effectively enlarging <code>log_msg_base</code> itself).
+When <code>printf(log_msg_base)</code> is called it will trigger our format string which, at this point, has only one constraint: it can contain only one pointer (because the string ends with a NULL byte).</p>
+<h3 id="arbitrary-write-and-ret2libc">Arbitrary write and ret2libc<a hidden class="anchor" aria-hidden="true" href="#arbitrary-write-and-ret2libc">#</a></h3>
+<p>Now we can leak libc and think about how to achieve ACE.
+My first idea was to override something on the GOT with a onegadget, but I didn&rsquo;t manage to find a GOT entry that satisfied the constraints of any onegadget. This was not a great moment, because I realized that I had to create a ROP chain on the stack with format strings.
+After a good half-an-hour of pain I managed to ret2libc and flagged!</p>
+<hr>
+<h2 id="in-summary">IN SUMMARY<a hidden class="anchor" aria-hidden="true" href="#in-summary">#</a></h2>
+<ol>
+<li>Overflow <code>log_msg_base</code> into <code>command</code> with <code>%256c</code></li>
+<li>Override <code>log_msg_base</code>&rsquo;s NULL byte with the next command, enlarging <code>log_msg_base</code> (our format string). Next commands will be appended to <code>log_msg_base</code>.</li>
+<li>Leak libc with <code>%37$p</code></li>
+<li>Take a deep breath</li>
+<li>Write a ret2libc payload on the stack with the format string (one pointer per command due to NULL bytes)</li>
+</ol>
+<hr>
+<h2 id="final-thoughts">FINAL THOUGHTS<a hidden class="anchor" aria-hidden="true" href="#final-thoughts">#</a></h2>
+<p>This was a really <del>painful</del> fun challenge where I learned more about printf and buffer overflows through format string attacks.</p>
+
+
+  </div>
+
+  <footer class="post-footer">
+  </footer>
+</article>
+    </main>
+    
+<footer class="footer">
+        <span>&copy; 2025 <a href="http://leo1.cc:5555/">leo_something</a></span> · 
+
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a><script src="https://cdnjs.cloudflare.com/ajax/libs/medium-zoom/1.0.6/medium-zoom.min.js" integrity="sha512-N9IJRoc3LaP3NDoiGkcPa4gG94kapGpaA5Zq9/Dr04uf5TbLFU5q0o8AbRhLKUUlp8QFS2u7S+Yti0U7QtuZvQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+<script>
+    const images = Array.from(document.querySelectorAll(".post-content img"));
+    images.forEach(img => {
+        mediumZoom(img, {
+            margin: 0,  
+            scrollOffset: 40,  
+            container: null,  
+            template: null,  
+            background: 'rgba(0, 0, 0, 0.8)'
+        });
+    });
+</script>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerHTML = 'copy';
+
+        function copyingDone() {
+            copybutton.innerHTML = 'copied!';
+            setTimeout(() => {
+                copybutton.innerHTML = 'copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>

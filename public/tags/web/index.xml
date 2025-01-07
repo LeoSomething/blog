@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Web on leo_something</title>
+    <link>http://leo1.cc:5555/tags/web/</link>
+    <description>Recent content in Web on leo_something</description>
+    <generator>Hugo -- 0.140.2</generator>
+    <language>en-us</language>
+    <lastBuildDate>Mon, 03 Jun 2024 12:03:00 +0000</lastBuildDate>
+    <atom:link href="http://leo1.cc:5555/tags/web/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>CodegateJunior24 - Othernote</title>
+      <link>http://leo1.cc:5555/posts/writeups/codegatejunior24-othernote/</link>
+      <pubDate>Mon, 03 Jun 2024 12:03:00 +0000</pubDate>
+      <guid>http://leo1.cc:5555/posts/writeups/codegatejunior24-othernote/</guid>
+      <description>Simple web challenge about prototype pollution in python. It was part of the Codegate quals for juniors of 2024 (I made the writeup only because it was required to move to the finals).</description>
+    </item>
+    <item>
+      <title>SaarCTF2023 - Pasteable</title>
+      <link>http://leo1.cc:5555/posts/writeups/saarctf23-pasteable/</link>
+      <pubDate>Sun, 19 Nov 2023 12:00:00 +0000</pubDate>
+      <guid>http://leo1.cc:5555/posts/writeups/saarctf23-pasteable/</guid>
+      <description>This challenge was part of the attack/defense SaarCTF of 2023. This is a web challenge written in PHP, where a wrong use of &amp;ldquo;==&amp;rdquo; led to a type juggling vulnerability.</description>
+    </item>
+  </channel>
+</rss>

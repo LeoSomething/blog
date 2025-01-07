@@ -1,0 +1,65 @@
+baseURL: http://leo1.cc:5555/
+languageCode: en-us
+title: leo_something
+theme: ["PaperMod"]
+
+outputs:
+  home:
+    - HTML
+    - JSON
+
+pagination:
+  pagerSize: 6
+
+markup:
+  goldmark:
+    renderer:
+      unsafe: true
+
+params:
+  # ShowShareButtons: true
+  # ShowReadingTime: true
+  # ShowBreadCrumbs: true
+  ShowCodeCopyButtons: true
+
+  fuseOpts:
+    isCaseSensitive: false
+    shouldSort: true
+    ignoreLocation: true
+    threshold: 0
+    minMatchCharLength: 1
+    # limit: 10 # refer: https://www.fusejs.io/api/methods.html#search
+    keys: ["title", "summary"]
+
+  homeInfoParams:
+    Title: "Hi lads, @leo_something here!"
+    Content: >
+      As I really enjoy CTFs competitions
+      in this blog I'll share CTF related stuff, mainly writeups,
+      if I ever find the willpower to write them.
+
+      I usually tackle binary exploitation challenges, so yes.. only
+      low level stuff here.
+
+  socialIcons:
+    - name: "discord"
+      url: "https://discordapp.com/users/leo_something"
+
+menu:
+  main:
+    - identifier: home
+      name: Home
+      url: /
+      weight: 10
+    - identifier: categories
+      name: Categories
+      url: /categories/
+      weight: 20
+    - identifier: tags
+      name: Tags
+      url: /tags/
+      weight: 20
+    - identifier: search
+      name: Search
+      url: /search/
+      weight: 30

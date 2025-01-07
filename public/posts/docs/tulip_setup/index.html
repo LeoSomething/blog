@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>Tulip setup for A/D CTFs | leo_something</title>
+<meta name="keywords" content="attack-defense, infra">
+<meta name="description" content="Tulip is a traffic analyzer tool made for A/D CTFs, this post walks you throught all the important steps requied to deploy Tulip painlessly (hopefully).">
+<meta name="author" content="leo_something">
+<link rel="canonical" href="http://leo1.cc:5555/posts/docs/tulip_setup/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.0c2131417d0b88f5928cdb2549da0d09bb391dae4fb3114012aa1349b07d4a44.css" integrity="sha256-DCExQX0LiPWSjNslSdoNCbs5Ha5PsxFAEqoTSbB9SkQ=" rel="preload stylesheet" as="style">
+<link rel="icon" href="http://leo1.cc:5555/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="http://leo1.cc:5555/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="http://leo1.cc:5555/favicon-32x32.png">
+<link rel="apple-touch-icon" href="http://leo1.cc:5555/apple-touch-icon.png">
+<link rel="mask-icon" href="http://leo1.cc:5555/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" hreflang="en" href="http://leo1.cc:5555/posts/docs/tulip_setup/">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --code-block-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:url" content="http://leo1.cc:5555/posts/docs/tulip_setup/">
+  <meta property="og:site_name" content="leo_something">
+  <meta property="og:title" content="Tulip setup for A/D CTFs">
+  <meta property="og:description" content="Tulip is a traffic analyzer tool made for A/D CTFs, this post walks you throught all the important steps requied to deploy Tulip painlessly (hopefully).">
+  <meta property="og:locale" content="en-us">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-04-19T12:00:00+00:00">
+    <meta property="article:modified_time" content="2024-04-19T12:00:00+00:00">
+    <meta property="article:tag" content="Attack-Defense">
+    <meta property="article:tag" content="Infra">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Tulip setup for A/D CTFs">
+<meta name="twitter:description" content="Tulip is a traffic analyzer tool made for A/D CTFs, this post walks you throught all the important steps requied to deploy Tulip painlessly (hopefully).">
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "Posts",
+      "item": "http://leo1.cc:5555/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "Tulip setup for A/D CTFs",
+      "item": "http://leo1.cc:5555/posts/docs/tulip_setup/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Tulip setup for A/D CTFs",
+  "name": "Tulip setup for A\/D CTFs",
+  "description": "Tulip is a traffic analyzer tool made for A/D CTFs, this post walks you throught all the important steps requied to deploy Tulip painlessly (hopefully).",
+  "keywords": [
+    "attack-defense", "infra"
+  ],
+  "articleBody": "Setup tulip on the VM Tulip specific configurations Clone the repo\n$ git clone https://github.com/OpenAttackDefenseTools/tulip.git $ cd tulip Edit services/api/configurations.py with the correct tick_length, start_date, vm_ip, and the services\n$ cp .env.example .env edit .env with the correct FLAG_REGEX, TICK_START, TICK_LENGTH and change TRAFFIC_DIR_HOST to point to the correct folder containing the pcaps (in our case /ready_pcaps)\nIf you want tulip to listen on a different port (e.g. port 4444) edit docker-compose.yml and under the frontend service change\nports: - \"3000:3000\" to\nports: - \"4444:3000\" WARNING: (if you host tulip on the vulnbox and don’t change the web interface port you risk other teams to steal flags throght tulip. Yep, they know tulip default port is 3000)\n$ docker compose up -d --build Tulip is now running.\nPacket capturing Save these scripts:\n/create-pcap.sh\n#!/bin/sh # -i game : game is the wireguard network interface, change it as needed mkdir -p /pcaps mkdir -p /ready_pcaps chmod 777 /pcaps chmod 777 /ready_pcaps tcpdump -G 120 -w /pcaps/myfile-%Y-%m-%d_%H.%M.%S.pcap -i game -z '/post-rotate.sh' port not 22 /post-rotate.sh\n#!/bin/sh mkdir -p /ready_pcaps/ mv $1 /ready_pcaps/ Then disable the apparmor profile for tcpdump\n$ apt install apparmor-utils $ aa-complain /usr/bin/tcpdump Now in a tmux or screen:\n$ chmod +x /create-pcap.sh $ chmod +x /post-rotate.sh $ /create-pcap.sh While create-pcap.sh is running, ready_pcaps will be populated with the network pcaps and Tulip will show them on the web interface.s\nSetup Tulip on a dedicated VPS On the vps Clone the repo\n$ git clone https://github.com/OpenAttackDefenseTools/tulip.git $ cd tulip Edit services/api/configurations.py with the correct tick_length, start_date, vm_ip, and the services\n$ cp .env.example .env edit .env with the correct FLAG_REGEX, TICK_START and TICK_LENGTH\nIf you want tulip to only listen on localhost:3000 instead of 0.0.0.0:3000, then edit docker-compose.yml and under the frontend service change\nports: - \"3000:3000\" to\nports: - \"127.0.0.1:3000:3000\" $ docker compose up -d --build Tulip is now running.\nOn the vulnbox Save these scripts:\n/create-pcap.sh\n#!/bin/sh # -i game : game is the wireguard network interface, change it as needed mkdir -p /pcaps mkdir -p /ready_pcaps chmod 777 /pcaps chmod 777 /ready_pcaps tcpdump -G 120 -w /pcaps/myfile-%Y-%m-%d_%H.%M.%S.pcap -i game -z '/post-rotate.sh' port not 22 /post-rotate.sh\n#!/bin/sh mkdir -p /ready_pcaps/ mv $1 /ready_pcaps/ Then disable the apparmor profile for tcpdump\n$ apt install apparmor-utils $ aa-complain /usr/bin/tcpdump Now in a tmux or screen:\n$ chmod +x /create-pcap.sh $ chmod +x /post-rotate.sh $ /create-pcap.sh While create-pcap.sh is running, ready_pcaps will be populated with the network pcaps.\nSend pcaps to tulip The last thing is to send the pcaps to tulip, there are two ways to do it :\n1: The vps has ssh access to the vulnbox, and can scp the pcaps 2: The vps is not in the vpn, so no access to the vulnbox. In this case the vulnbox will have ssh access to the vps (this could be hardened) Case 1: First create an ssh key in the vps and add it in the vulbox.\nThen, on the vps save the script take-pcap.sh:\n#!/usr/bin/bash IP_VULNBOX=10.32.55.2 while true do rsync -avz --remove-source-files root@$IP_VULNBOX:/ready_pcaps/* CHANGE_ME_TRAFFIC_DIR_HOST sleep 10 # tweak this as you like done Now open a tmux and run this script, tulip will receive the pcaps.\nCase 2: First create an ssh key in the vulnbox and add it in the vps.\nThen, on the vulnbox save the script take-pcap.sh:\n#!/usr/bin/bash IP_VPS=10.32.55.2 # remember to change this while true do rsync -avz --remove-source-files /ready_pcaps/* root@$IP_VPS:CHANGE_ME_TRAFFIC_DIR_HOST sleep 10 # tweak this as you like done Now open a tmux and run this script, tulip will receive the pcaps.\nCHANGE_ME_TRAFFIC_DIR_HOST is the absolute path to the TRAFFIC_DIR_HOST value in the .env you wrote when configuring tulip.\n",
+  "wordCount" : "608",
+  "inLanguage": "en",
+  "datePublished": "2024-04-19T12:00:00Z",
+  "dateModified": "2024-04-19T12:00:00Z",
+  "author":{
+    "@type": "Person",
+    "name": "leo_something"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "http://leo1.cc:5555/posts/docs/tulip_setup/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "leo_something",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "http://leo1.cc:5555/favicon.ico"
+    }
+  }
+}
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="http://leo1.cc:5555/" title="Home">
+                    <span>Home</span>
+                </a>
+            </li>
+            <li>
+                <a href="http://leo1.cc:5555/categories/" title="Categories">
+                    <span>Categories</span>
+                </a>
+            </li>
+            <li>
+                <a href="http://leo1.cc:5555/tags/" title="Tags">
+                    <span>Tags</span>
+                </a>
+            </li>
+            <li>
+                <a href="http://leo1.cc:5555/search/" title="Search (Alt &#43; /)" accesskey=/>
+                    <span>Search</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    
+    <h1 class="post-title entry-hint-parent">
+      Tulip setup for A/D CTFs
+    </h1>
+    <div class="post-meta"><span title='2024-04-19 12:00:00 +0000 UTC'>April 19, 2024</span>&nbsp;·&nbsp;leo_something
+
+</div>
+  </header>
+  <div class="tags" style="padding: 2px;">
+    <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+      
+      <a href="/tags/attack-defense" class="custom-tag">
+        attack-defense
+      </a>
+      
+      <a href="/tags/infra" class="custom-tag">
+        infra
+      </a>
+      
+    </div>
+  </div>
+
+  <div style="height: var(--gap);"></div> <div class="toc">
+    <details >
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#setup-tulip-on-the-vm" aria-label="Setup tulip on the VM">Setup tulip on the VM</a><ul>
+                        <ul>
+                        
+                <li>
+                    <a href="#tulip-specific-configurations" aria-label="Tulip specific configurations">Tulip specific configurations</a></li>
+                <li>
+                    <a href="#packet-capturing" aria-label="Packet capturing">Packet capturing</a></li></ul>
+                    </ul>
+                </li>
+                <li>
+                    <a href="#setup-tulip-on-a-dedicated-vps" aria-label="Setup Tulip on a dedicated VPS">Setup Tulip on a dedicated VPS</a><ul>
+                        
+                <li>
+                    <a href="#on-the-vps" aria-label="On the vps">On the vps</a></li>
+                <li>
+                    <a href="#on-the-vulnbox" aria-label="On the vulnbox">On the vulnbox</a></li>
+                <li>
+                    <a href="#send-pcaps-to-tulip" aria-label="Send pcaps to tulip">Send pcaps to tulip</a><ul>
+                        
+                <li>
+                    <a href="#case-1" aria-label="Case 1:">Case 1:</a></li>
+                <li>
+                    <a href="#case-2" aria-label="Case 2:">Case 2:</a>
+                </li>
+            </ul>
+            </li>
+            </ul>
+            </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
+  <div class="post-content"><h1 id="setup-tulip-on-the-vm">Setup tulip on the VM<a hidden class="anchor" aria-hidden="true" href="#setup-tulip-on-the-vm">#</a></h1>
+<h3 id="tulip-specific-configurations">Tulip specific configurations<a hidden class="anchor" aria-hidden="true" href="#tulip-specific-configurations">#</a></h3>
+<p>Clone the repo</p>
+<pre tabindex="0"><code>$ git clone https://github.com/OpenAttackDefenseTools/tulip.git  
+$ cd tulip  
+</code></pre><hr>
+<p>Edit <code>services/api/configurations.py</code> with the correct <code>tick_length</code>, <code>start_date</code>, <code>vm_ip</code>, and the <code>services</code></p>
+<hr>
+<pre tabindex="0"><code>$ cp .env.example .env  
+</code></pre><p>edit <code>.env</code> with the correct <code>FLAG_REGEX</code>, <code>TICK_START</code>, <code>TICK_LENGTH</code> and
+change <code>TRAFFIC_DIR_HOST</code> to point to the correct folder containing the pcaps (in our case <code>/ready_pcaps</code>)</p>
+<hr>
+<p>If you want tulip to listen on a different port (e.g. port 4444) edit <code>docker-compose.yml</code>
+and under the <code>frontend</code> service change</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yml" data-lang="yml"><span style="display:flex;"><span><span style="color:#f92672">ports</span>: 
+</span></span><span style="display:flex;"><span>    - <span style="color:#e6db74">&#34;3000:3000&#34;</span>
+</span></span></code></pre></div><p>to</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yml" data-lang="yml"><span style="display:flex;"><span><span style="color:#f92672">ports</span>: 
+</span></span><span style="display:flex;"><span>    - <span style="color:#e6db74">&#34;4444:3000&#34;</span>
+</span></span></code></pre></div><p><strong>WARNING:</strong>
+(if you host tulip on the vulnbox and don&rsquo;t change the web interface port you risk other teams to steal flags throght tulip. Yep, they know tulip default port is 3000)</p>
+<hr>
+<pre tabindex="0"><code>$ docker compose up -d --build
+</code></pre><p>Tulip is now running.</p>
+<hr>
+<h3 id="packet-capturing">Packet capturing<a hidden class="anchor" aria-hidden="true" href="#packet-capturing">#</a></h3>
+<p>Save these scripts:</p>
+<p><code>/create-pcap.sh</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e">#!/bin/sh
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#75715e"># -i game : game is the wireguard network interface, change it as needed</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>mkdir -p /pcaps
+</span></span><span style="display:flex;"><span>mkdir -p /ready_pcaps
+</span></span><span style="display:flex;"><span>chmod <span style="color:#ae81ff">777</span> /pcaps
+</span></span><span style="display:flex;"><span>chmod <span style="color:#ae81ff">777</span> /ready_pcaps
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>tcpdump -G <span style="color:#ae81ff">120</span> -w /pcaps/myfile-%Y-%m-%d_%H.%M.%S.pcap -i game -z <span style="color:#e6db74">&#39;/post-rotate.sh&#39;</span> port not <span style="color:#ae81ff">22</span>
+</span></span></code></pre></div><p><code>/post-rotate.sh</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e">#!/bin/sh
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>mkdir -p /ready_pcaps/
+</span></span><span style="display:flex;"><span>mv $1 /ready_pcaps/
+</span></span></code></pre></div><p>Then disable the apparmor profile for tcpdump</p>
+<pre tabindex="0"><code>$ apt install apparmor-utils
+$ aa-complain /usr/bin/tcpdump
+</code></pre><p>Now in a tmux or screen:</p>
+<pre tabindex="0"><code>$ chmod +x /create-pcap.sh
+$ chmod +x /post-rotate.sh
+$ /create-pcap.sh
+</code></pre><p>While <code>create-pcap.sh</code> is running, <code>ready_pcaps</code> will be populated with the network pcaps and
+Tulip will show them on the web interface.s</p>
+<hr>
+<h1 id="setup-tulip-on-a-dedicated-vps">Setup Tulip on a dedicated VPS<a hidden class="anchor" aria-hidden="true" href="#setup-tulip-on-a-dedicated-vps">#</a></h1>
+<h2 id="on-the-vps">On the vps<a hidden class="anchor" aria-hidden="true" href="#on-the-vps">#</a></h2>
+<p>Clone the repo</p>
+<pre tabindex="0"><code>$ git clone https://github.com/OpenAttackDefenseTools/tulip.git  
+$ cd tulip  
+</code></pre><hr>
+<p>Edit <code>services/api/configurations.py</code> with the correct <code>tick_length</code>, <code>start_date</code>, <code>vm_ip</code>, and the <code>services</code></p>
+<hr>
+<pre tabindex="0"><code>$ cp .env.example .env  
+</code></pre><p>edit <code>.env</code> with the correct <code>FLAG_REGEX</code>, <code>TICK_START</code> and <code>TICK_LENGTH</code></p>
+<hr>
+<p>If you want tulip to only listen on <code>localhost:3000</code> instead of <code>0.0.0.0:3000</code>, then edit <code>docker-compose.yml</code>
+and under the <code>frontend</code> service change</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yml" data-lang="yml"><span style="display:flex;"><span><span style="color:#f92672">ports</span>: 
+</span></span><span style="display:flex;"><span>    - <span style="color:#e6db74">&#34;3000:3000&#34;</span>
+</span></span></code></pre></div><p>to</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yml" data-lang="yml"><span style="display:flex;"><span><span style="color:#f92672">ports</span>: 
+</span></span><span style="display:flex;"><span>    - <span style="color:#e6db74">&#34;127.0.0.1:3000:3000&#34;</span>
+</span></span></code></pre></div><hr>
+<pre tabindex="0"><code>$ docker compose up -d --build
+</code></pre><p>Tulip is now running.</p>
+<hr>
+<h2 id="on-the-vulnbox">On the vulnbox<a hidden class="anchor" aria-hidden="true" href="#on-the-vulnbox">#</a></h2>
+<p>Save these scripts:</p>
+<p><code>/create-pcap.sh</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e">#!/bin/sh
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#75715e"># -i game : game is the wireguard network interface, change it as needed</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>mkdir -p /pcaps
+</span></span><span style="display:flex;"><span>mkdir -p /ready_pcaps
+</span></span><span style="display:flex;"><span>chmod <span style="color:#ae81ff">777</span> /pcaps
+</span></span><span style="display:flex;"><span>chmod <span style="color:#ae81ff">777</span> /ready_pcaps
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>tcpdump -G <span style="color:#ae81ff">120</span> -w /pcaps/myfile-%Y-%m-%d_%H.%M.%S.pcap -i game -z <span style="color:#e6db74">&#39;/post-rotate.sh&#39;</span> port not <span style="color:#ae81ff">22</span>
+</span></span></code></pre></div><p><code>/post-rotate.sh</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e">#!/bin/sh
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>mkdir -p /ready_pcaps/
+</span></span><span style="display:flex;"><span>mv $1 /ready_pcaps/
+</span></span></code></pre></div><p>Then disable the apparmor profile for tcpdump</p>
+<pre tabindex="0"><code>$ apt install apparmor-utils
+$ aa-complain /usr/bin/tcpdump
+</code></pre><p>Now in a tmux or screen:</p>
+<pre tabindex="0"><code>$ chmod +x /create-pcap.sh
+$ chmod +x /post-rotate.sh
+$ /create-pcap.sh
+</code></pre><p>While <code>create-pcap.sh</code> is running, <code>ready_pcaps</code> will be populated with the network pcaps.</p>
+<hr>
+<h2 id="send-pcaps-to-tulip">Send pcaps to tulip<a hidden class="anchor" aria-hidden="true" href="#send-pcaps-to-tulip">#</a></h2>
+<p>The last thing is to send the pcaps to tulip, there are two ways to do it :</p>
+<ul>
+<li>1: The vps has ssh access to the vulnbox, and can scp the pcaps</li>
+<li>2: The vps is not in the vpn, so no access to the vulnbox. In this case the vulnbox will have ssh access to the vps (this could be hardened)</li>
+</ul>
+<hr>
+<h3 id="case-1"><code>Case 1</code>:<a hidden class="anchor" aria-hidden="true" href="#case-1">#</a></h3>
+<p>First create an ssh key in the vps and add it in the vulbox.<br>
+Then, on the vps save the script <code>take-pcap.sh</code>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e">#!/usr/bin/bash
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>IP_VULNBOX<span style="color:#f92672">=</span>10.32.55.2
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">while</span> true
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">do</span>
+</span></span><span style="display:flex;"><span>	rsync -avz --remove-source-files root@$IP_VULNBOX:/ready_pcaps/* CHANGE_ME_TRAFFIC_DIR_HOST
+</span></span><span style="display:flex;"><span>	sleep <span style="color:#ae81ff">10</span> <span style="color:#75715e"># tweak this as you like</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">done</span>
+</span></span></code></pre></div><p>Now open a tmux and run this script, tulip will receive the pcaps.</p>
+<hr>
+<h3 id="case-2"><code>Case 2</code>:<a hidden class="anchor" aria-hidden="true" href="#case-2">#</a></h3>
+<p>First create an ssh key in the vulnbox and add it in the vps.<br>
+Then, on the vulnbox save the script <code>take-pcap.sh</code>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e">#!/usr/bin/bash
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>IP_VPS<span style="color:#f92672">=</span>10.32.55.2 <span style="color:#75715e"># remember to change this</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">while</span> true
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">do</span>
+</span></span><span style="display:flex;"><span>	rsync -avz --remove-source-files /ready_pcaps/* root@$IP_VPS:CHANGE_ME_TRAFFIC_DIR_HOST
+</span></span><span style="display:flex;"><span>	sleep <span style="color:#ae81ff">10</span> <span style="color:#75715e"># tweak this as you like</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">done</span>
+</span></span></code></pre></div><p>Now open a tmux and run this script, tulip will receive the pcaps.</p>
+<hr>
+<p><code>CHANGE_ME_TRAFFIC_DIR_HOST</code> is the absolute path to the <code>TRAFFIC_DIR_HOST</code> value in the <code>.env</code> you wrote when configuring tulip.</p>
+
+
+  </div>
+
+  <footer class="post-footer">
+  </footer>
+</article>
+    </main>
+    
+<footer class="footer">
+        <span>&copy; 2025 <a href="http://leo1.cc:5555/">leo_something</a></span> · 
+
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a><script src="https://cdnjs.cloudflare.com/ajax/libs/medium-zoom/1.0.6/medium-zoom.min.js" integrity="sha512-N9IJRoc3LaP3NDoiGkcPa4gG94kapGpaA5Zq9/Dr04uf5TbLFU5q0o8AbRhLKUUlp8QFS2u7S+Yti0U7QtuZvQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+<script>
+    const images = Array.from(document.querySelectorAll(".post-content img"));
+    images.forEach(img => {
+        mediumZoom(img, {
+            margin: 0,  
+            scrollOffset: 40,  
+            container: null,  
+            template: null,  
+            background: 'rgba(0, 0, 0, 0.8)'
+        });
+    });
+</script>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerHTML = 'copy';
+
+        function copyingDone() {
+            copybutton.innerHTML = 'copied!';
+            setTimeout(() => {
+                copybutton.innerHTML = 'copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>

