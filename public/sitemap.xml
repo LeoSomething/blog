@@ -3,7 +3,28 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
     <loc>http://leo1.cc/categories/</loc>
-    <lastmod>2024-09-16T12:00:00+00:00</lastmod>
+    <lastmod>2025-01-14T19:30:00+00:00</lastmod>
+  </url><url>
+    <loc>http://leo1.cc/categories/docs/</loc>
+    <lastmod>2025-01-14T19:30:00+00:00</lastmod>
+  </url><url>
+    <loc>http://leo1.cc/tags/kernel/</loc>
+    <lastmod>2025-01-14T19:30:00+00:00</lastmod>
+  </url><url>
+    <loc>http://leo1.cc/posts/docs/modprobe/</loc>
+    <lastmod>2025-01-14T19:30:00+00:00</lastmod>
+  </url><url>
+    <loc>http://leo1.cc/</loc>
+    <lastmod>2025-01-14T19:30:00+00:00</lastmod>
+  </url><url>
+    <loc>http://leo1.cc/posts/</loc>
+    <lastmod>2025-01-14T19:30:00+00:00</lastmod>
+  </url><url>
+    <loc>http://leo1.cc/tags/</loc>
+    <lastmod>2025-01-14T19:30:00+00:00</lastmod>
+  </url><url>
+    <loc>http://leo1.cc/posts/docs/msg_msg/</loc>
+    <lastmod>2025-01-14T19:00:00+00:00</lastmod>
   </url><url>
     <loc>http://leo1.cc/posts/writeups/cte24-didup/</loc>
     <lastmod>2024-09-16T12:00:00+00:00</lastmod>
@@ -11,19 +32,10 @@
     <loc>http://leo1.cc/tags/heap/</loc>
     <lastmod>2024-09-16T12:00:00+00:00</lastmod>
   </url><url>
-    <loc>http://leo1.cc/</loc>
-    <lastmod>2024-09-16T12:00:00+00:00</lastmod>
-  </url><url>
-    <loc>http://leo1.cc/posts/</loc>
-    <lastmod>2024-09-16T12:00:00+00:00</lastmod>
-  </url><url>
     <loc>http://leo1.cc/tags/pwn/</loc>
     <lastmod>2024-09-16T12:00:00+00:00</lastmod>
   </url><url>
     <loc>http://leo1.cc/tags/race-condition/</loc>
-    <lastmod>2024-09-16T12:00:00+00:00</lastmod>
-  </url><url>
-    <loc>http://leo1.cc/tags/</loc>
     <lastmod>2024-09-16T12:00:00+00:00</lastmod>
   </url><url>
     <loc>http://leo1.cc/categories/writeups/</loc>
@@ -36,9 +48,6 @@
     <lastmod>2024-07-08T12:00:00+00:00</lastmod>
   </url><url>
     <loc>http://leo1.cc/tags/dlresolve/</loc>
-    <lastmod>2024-06-12T12:00:00+00:00</lastmod>
-  </url><url>
-    <loc>http://leo1.cc/categories/docs/</loc>
     <lastmod>2024-06-12T12:00:00+00:00</lastmod>
   </url><url>
     <loc>http://leo1.cc/posts/docs/ret2dlresolve/</loc>

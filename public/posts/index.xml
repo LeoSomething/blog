@@ -6,8 +6,22 @@
     <description>Recent content in Posts on leo_something</description>
     <generator>Hugo -- 0.140.2</generator>
     <language>en-us</language>
-    <lastBuildDate>Mon, 16 Sep 2024 12:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Tue, 14 Jan 2025 19:30:00 +0000</lastBuildDate>
     <atom:link href="http://leo1.cc/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Kpwn tecniques: modprobe_path</title>
+      <link>http://leo1.cc/posts/docs/modprobe/</link>
+      <pubDate>Tue, 14 Jan 2025 19:30:00 +0000</pubDate>
+      <guid>http://leo1.cc/posts/docs/modprobe/</guid>
+      <description>modprobe_path is a global variable that in most kernels is RW. This variable is contains a path to an executable, do you see where this is going..?</description>
+    </item>
+    <item>
+      <title>Kpwn tecniques: struct msg_msg</title>
+      <link>http://leo1.cc/posts/docs/msg_msg/</link>
+      <pubDate>Tue, 14 Jan 2025 19:00:00 +0000</pubDate>
+      <guid>http://leo1.cc/posts/docs/msg_msg/</guid>
+      <description>msg_msg is a really powerful and elastic kernel struct that can be abused to obtain strong primitives, such as arbitrary read/write/free.</description>
+    </item>
     <item>
       <title>CTE24 - DiDUP</title>
       <link>http://leo1.cc/posts/writeups/cte24-didup/</link>
