@@ -72,7 +72,7 @@ The basic ones are:
 	This can be abused further in specific cases, I did that to solve **empdb** from **BackdoorCTF 2023**.
 	In that case, using **msg_msg** was an easy way to obtain a free chunk containing arbitrary values (the message text).  From there I could allocate an array of pointers over the freed **msg_msg** and, leveraging uninitialized memory access, I was able to gain arbitrary write. More on that here.
 
-#### Useful links & further exploitation
+## Useful links & further exploitation
 - https://syst3mfailure.io/wall-of-perdition/
 - https://www.willsroot.io/2021/08/corctf-2021-fire-of-salvation-writeup.html
 - https://hardenedvault.net/blog/2022-11-13-msg_msg-recon-mitigation-ved/
