@@ -10,7 +10,7 @@ author: "leo_something"
 ShowToc: true
 ---
 
-## struct msg_msg
+## Struct msg_msg
 
 As I just started kernel exploitation I'll cover the basics of this struct, but at the bottom there are other useful links for further exploitation.
 Maybe I'll write a part 2 in the future.

