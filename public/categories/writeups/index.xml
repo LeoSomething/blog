@@ -10,16 +10,16 @@
     <atom:link href="http://leo1.cc/categories/writeups/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Srdnlen 2025 - Snowstorm</title>
-      <link>http://leo1.cc/posts/writeups/srdnlen25---snowstorm/</link>
+      <link>http://leo1.cc/posts/writeups/srdnlen25-snowstorm/</link>
       <pubDate>Tue, 21 Jan 2025 18:50:00 +0000</pubDate>
-      <guid>http://leo1.cc/posts/writeups/srdnlen25---snowstorm/</guid>
+      <guid>http://leo1.cc/posts/writeups/srdnlen25-snowstorm/</guid>
       <description>Interesting pwn challenge regarding the exploitation of a simple stack BOF.</description>
     </item>
     <item>
       <title>Srdnlen 2025 - Kinderheim 511</title>
-      <link>http://leo1.cc/posts/writeups/srdnlen25---kinderheim_511/</link>
+      <link>http://leo1.cc/posts/writeups/srdnlen25-kinderheim_511/</link>
       <pubDate>Tue, 21 Jan 2025 18:49:00 +0000</pubDate>
-      <guid>http://leo1.cc/posts/writeups/srdnlen25---kinderheim_511/</guid>
+      <guid>http://leo1.cc/posts/writeups/srdnlen25-kinderheim_511/</guid>
       <description>Heap challenge with the goal of achieving arbitrary write to read the flag from the heap.</description>
     </item>
     <item>
