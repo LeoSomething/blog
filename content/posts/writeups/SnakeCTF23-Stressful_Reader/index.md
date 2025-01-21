@@ -6,7 +6,7 @@ summary: "Pyjail challenge from SnakeCTF 2023."
 
 categories: ["Writeups"]
 tags: ["misc", "python", "pyjail"]
-author: "team bhackari"
+author: "bhackari"
 ---
 
 ## Challenge description:

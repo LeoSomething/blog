@@ -7,7 +7,7 @@ Sounds fun right?"
 
 categories: ["Writeups"]
 tags: ["rev"]
-author: "team bhackari"
+author: "bhackari"
 ---
 
 ## Challenge description:

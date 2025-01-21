@@ -6,7 +6,7 @@ summary: "This challenge was part of the attack/defense SaarCTF of 2023. This is
 
 categories: ["Writeups"]
 tags: ["attack-defense", "web", "PHP", "type confusion"]
-author: "team bhackari"
+author: "bhackari"
 ---
 
 ## Service description

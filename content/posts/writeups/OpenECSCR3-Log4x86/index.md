@@ -5,31 +5,19 @@ title: 'OpenECSC Round 3 - Log4x86'
 summary: "This challenge comes from the 3rd round of openECSC 2024. The challenge was really really interesting: the exploitation tecnique involved a buffer overflow through a really short format string vulnerability."
 
 categories: ["Writeups"]
-tags: ["pwn", "format string", "BOF"]
+tags: ["pwn", "format string", "bof"]
 author: "leo_something"
+ShowToc: True
 ---
 
-## CHALLENGE DESCRIPTION
+## Challenge Description
 
 Logging data from your application is very important. This is why we are logging ABSOLUTELY EVERYTHING in this small calculator app.
 
 `nc log4x86.challs.open.ecsc2024.it 38019`
 
 ---
-## TABLE OF CONTENTS
-
-- [BINARY OVERVIEW](#binary-overview)
-- [REVERSE ENGINEERING](#reverse-engineering)
-- [EXPLOITATION](#exploitation)
-   * [First steps](#first-steps)
-   * [Initial ideas](#initial-ideas)
-   * [Bypassing the whitelist](#bypassing-the-whitelist)
-   * [Arbitrary write and ret2libc](#arbitrary-write-and-ret2libc)
-- [SUMMARY](#in-summary)
-- [FINAL THOUGHTS](#final-thoughts)
-
----
-## BINARY OVERVIEW
+## Overview
 
 Log4x86 is an x86 64 bit binary which consists in a simple calculator app wrapped with basic logging functionalities, such as:
 
@@ -40,7 +28,7 @@ Log4x86 is an x86 64 bit binary which consists in a simple calculator app wrappe
 Reading the decompiled code we can easily notice the intense use of `printf` and `snprinf`, which might be vulnerable to format string attacks.
 
 ---
-## REVERSE ENGINEERING
+## Reverse Engineering
 
 Decompiling the binary with Ida we can get a pretty neat `main` function.
 It's basically a while loop which gets our input with a well implemented `fgets`, then it parses it with the following instruction:
@@ -79,7 +67,7 @@ This basically writes a log message with the format string specified by `LOG_FOR
 Another great thing to notice is that `log_msg_base` is changed only the first time a specific log is triggered. In short, if we trigger the same command multiple times in a row, only the first time `log_msg_base` will change. Keep this in mind, it will come in useful.
 
 ---
-## EXPLOITATION
+## Exploitation
 
 ### First steps
 
@@ -169,7 +157,7 @@ My first idea was to override something on the GOT with a onegadget, but I didn'
 After a good half-an-hour of pain I managed to ret2libc and flagged!
 
 ---
-## IN SUMMARY
+## Summary
 
 1. Overflow `log_msg_base` into `command` with `%256c`
 2. Override `log_msg_base`'s NULL byte with the next command, enlarging `log_msg_base` (our format string). Next commands will be appended to `log_msg_base`.
@@ -178,6 +166,6 @@ After a good half-an-hour of pain I managed to ret2libc and flagged!
 5. Write a ret2libc payload on the stack with the format string (one pointer per command due to NULL bytes)
 
 ---
-## FINAL THOUGHTS
+## Final Thoughts
 
 This was a really ~~painful~~ fun challenge where I learned more about printf and buffer overflows through format string attacks.
