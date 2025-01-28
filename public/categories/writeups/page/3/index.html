@@ -5,11 +5,11 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <meta name="robots" content="index, follow">
-<title>Pwn | leo_something</title>
+<title>Writeups | leo_something</title>
 <meta name="keywords" content="">
 <meta name="description" content="">
 <meta name="author" content="">
-<link rel="canonical" href="http://leo1.cc/tags/pwn/">
+<link rel="canonical" href="http://leo1.cc/categories/writeups/">
 <link crossorigin="anonymous" href="/assets/css/stylesheet.62bb6a5e71ed8590b51185096e2d3dea8379889277e03fcf9ef8a01b0f6d9dc0.css" integrity="sha256-YrtqXnHthZC1EYUJbi096oN5iJJ34D/PnvigGw9tncA=" rel="preload stylesheet" as="style">
 <link rel="icon" href="http://leo1.cc/favicon.ico">
 <link rel="icon" type="image/png" sizes="16x16" href="http://leo1.cc/favicon-16x16.png">
@@ -18,8 +18,8 @@
 <link rel="mask-icon" href="http://leo1.cc/safari-pinned-tab.svg">
 <meta name="theme-color" content="#2e2e33">
 <meta name="msapplication-TileColor" content="#2e2e33">
-<link rel="alternate" type="application/rss+xml" href="http://leo1.cc/tags/pwn/index.xml">
-<link rel="alternate" hreflang="en" href="http://leo1.cc/tags/pwn/">
+<link rel="alternate" type="application/rss+xml" href="http://leo1.cc/categories/writeups/index.xml">
+<link rel="alternate" hreflang="en" href="http://leo1.cc/categories/writeups/">
 <noscript>
     <style>
         #theme-toggle,
@@ -56,13 +56,13 @@
         }
 
     </style>
-</noscript><meta property="og:url" content="http://leo1.cc/tags/pwn/">
+</noscript><meta property="og:url" content="http://leo1.cc/categories/writeups/">
   <meta property="og:site_name" content="leo_something">
-  <meta property="og:title" content="Pwn">
+  <meta property="og:title" content="Writeups">
   <meta property="og:locale" content="en-us">
   <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Pwn">
+<meta name="twitter:title" content="Writeups">
 <meta name="twitter:description" content="">
 
 </head>
@@ -132,124 +132,46 @@
 <main class="main"> 
 <header class="page-header">
   <h1>
-    Pwn
+    Writeups
   </h1>
 </header>
 
 <article class="post-entry tag-entry"> 
   <header class="entry-header">
-    <h2 class="entry-hint-parent">UIUCTF24 - Pwnymalloc
+    <h2 class="entry-hint-parent">SaarCTF2023 - Pasteable
     </h2>
   </header>
   <div class="entry-content">
-    <p>Pwnymalloc is a nice custom allocator challenge from UIUCTF 2024. The vulnerability was about an incorrect handling of the prev_size during consolitation.</p>
+    <p>This challenge was part of the attack/defense SaarCTF of 2023. This is a web challenge written in PHP, where a wrong use of “==” led to a type juggling vulnerability.</p>
   </div>
-  <footer class="entry-footer"><span title='2024-07-08 12:00:00 +0000 UTC'>July 8, 2024</span>&nbsp;·&nbsp;leo_something</footer>
+  <footer class="entry-footer"><span title='2023-11-19 12:00:00 +0000 UTC'>November 19, 2023</span>&nbsp;·&nbsp;bhackari</footer>
   <div class="tags" style="padding: 2px;">
     <div style="display: flex; flex-wrap: wrap; justify-content: flex-end; margin-top: 5px; gap: 5px;">
       
-      <a href="/tags/pwn" class="custom-tag">
-        pwn
+      <a href="/tags/attack-defense" class="custom-tag">
+        attack-defense
       </a>
       
-      <a href="/tags/heap" class="custom-tag">
-        heap
+      <a href="/tags/web" class="custom-tag">
+        web
       </a>
       
-      <a href="/tags/custom-allocator" class="custom-tag">
-        custom allocator
+      <a href="/tags/php" class="custom-tag">
+        php
+      </a>
+      
+      <a href="/tags/type-confusion" class="custom-tag">
+        type confusion
       </a>
       
     </div>
   </div>
 
-  <a class="entry-link" aria-label="post link to UIUCTF24 - Pwnymalloc" href="http://leo1.cc/posts/writeups/uiuctf24-pwnymalloc/"></a>
-</article>
-
-<article class="post-entry tag-entry"> 
-  <header class="entry-header">
-    <h2 class="entry-hint-parent">Ret2dlresolve in 64bit binaries
-    </h2>
-  </header>
-  <div class="entry-content">
-    <p>Ret2dlresolve is a really powerful tecnique to use in pwn challenges (even tho it’s not frequently seen). It’s useful when we don’t have libc leaks or don’t know the libc version.</p>
-  </div>
-  <footer class="entry-footer"><span title='2024-06-12 12:00:00 +0000 UTC'>June 12, 2024</span>&nbsp;·&nbsp;leo_something</footer>
-  <div class="tags" style="padding: 2px;">
-    <div style="display: flex; flex-wrap: wrap; justify-content: flex-end; margin-top: 5px; gap: 5px;">
-      
-      <a href="/tags/pwn" class="custom-tag">
-        pwn
-      </a>
-      
-      <a href="/tags/dlresolve" class="custom-tag">
-        dlresolve
-      </a>
-      
-    </div>
-  </div>
-
-  <a class="entry-link" aria-label="post link to Ret2dlresolve in 64bit binaries" href="http://leo1.cc/posts/docs/ret2dlresolve/"></a>
-</article>
-
-<article class="post-entry tag-entry"> 
-  <header class="entry-header">
-    <h2 class="entry-hint-parent">CodegateJunior24 - Baby Heap
-    </h2>
-  </header>
-  <div class="entry-content">
-    <p>Heap challenge from the Codegate quals for juniors of 2024. The vulnerability was an heap overflow that enabled an attacker to gain overlapping chunks, therefore arb read and write.</p>
-  </div>
-  <footer class="entry-footer"><span title='2024-06-03 12:02:00 +0000 UTC'>June 3, 2024</span>&nbsp;·&nbsp;leo_something</footer>
-  <div class="tags" style="padding: 2px;">
-    <div style="display: flex; flex-wrap: wrap; justify-content: flex-end; margin-top: 5px; gap: 5px;">
-      
-      <a href="/tags/pwn" class="custom-tag">
-        pwn
-      </a>
-      
-      <a href="/tags/heap" class="custom-tag">
-        heap
-      </a>
-      
-    </div>
-  </div>
-
-  <a class="entry-link" aria-label="post link to CodegateJunior24 - Baby Heap" href="http://leo1.cc/posts/writeups/codegatejunior24-baby_heap/"></a>
-</article>
-
-<article class="post-entry tag-entry"> 
-  <header class="entry-header">
-    <h2 class="entry-hint-parent">OpenECSC Round 3 - Log4x86
-    </h2>
-  </header>
-  <div class="entry-content">
-    <p>This challenge comes from the 3rd round of openECSC 2024. The challenge was really really interesting: the exploitation tecnique involved a buffer overflow through a really short format string vulnerability.</p>
-  </div>
-  <footer class="entry-footer"><span title='2024-05-25 12:00:00 +0000 UTC'>May 25, 2024</span>&nbsp;·&nbsp;leo_something</footer>
-  <div class="tags" style="padding: 2px;">
-    <div style="display: flex; flex-wrap: wrap; justify-content: flex-end; margin-top: 5px; gap: 5px;">
-      
-      <a href="/tags/pwn" class="custom-tag">
-        pwn
-      </a>
-      
-      <a href="/tags/format-string" class="custom-tag">
-        format string
-      </a>
-      
-      <a href="/tags/bof" class="custom-tag">
-        bof
-      </a>
-      
-    </div>
-  </div>
-
-  <a class="entry-link" aria-label="post link to OpenECSC Round 3 - Log4x86" href="http://leo1.cc/posts/writeups/openecscr3-log4x86/"></a>
+  <a class="entry-link" aria-label="post link to SaarCTF2023 - Pasteable" href="http://leo1.cc/posts/writeups/saarctf23-pasteable/"></a>
 </article>
 <footer class="page-footer">
   <nav class="pagination">
-    <a class="prev" href="http://leo1.cc/tags/pwn/">
+    <a class="prev" href="http://leo1.cc/categories/writeups/page/2/">
       «&nbsp;Prev&nbsp;
     </a>
   </nav>

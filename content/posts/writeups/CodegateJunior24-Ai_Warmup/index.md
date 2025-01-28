@@ -5,7 +5,7 @@ title: 'CodegateJunior24 - ai_warmup'
 summary: "Simple AI challenge from the Codegate quals for juniors of 2024 (I made the writeup only because it was required to move to the finals)."
 
 categories: ["Writeups"]
-tags: ["AI"]
+tags: ["ai"]
 author: "leo_something"
 ---
 

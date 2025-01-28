@@ -6,20 +6,34 @@
     <description>Recent content in Tags on leo_something</description>
     <generator>Hugo -- 0.140.2</generator>
     <language>en-us</language>
-    <lastBuildDate>Tue, 21 Jan 2025 18:50:00 +0000</lastBuildDate>
+    <lastBuildDate>Tue, 28 Jan 2025 14:22:00 +0000</lastBuildDate>
     <atom:link href="http://leo1.cc/tags/index.xml" rel="self" type="application/rss+xml" />
     <item>
-      <title>Bof</title>
-      <link>http://leo1.cc/tags/bof/</link>
-      <pubDate>Tue, 21 Jan 2025 18:50:00 +0000</pubDate>
-      <guid>http://leo1.cc/tags/bof/</guid>
+      <title>Kernel</title>
+      <link>http://leo1.cc/tags/kernel/</link>
+      <pubDate>Tue, 28 Jan 2025 14:22:00 +0000</pubDate>
+      <guid>http://leo1.cc/tags/kernel/</guid>
       <description></description>
     </item>
     <item>
       <title>Pwn</title>
       <link>http://leo1.cc/tags/pwn/</link>
-      <pubDate>Tue, 21 Jan 2025 18:50:00 +0000</pubDate>
+      <pubDate>Tue, 28 Jan 2025 14:22:00 +0000</pubDate>
       <guid>http://leo1.cc/tags/pwn/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Uaf</title>
+      <link>http://leo1.cc/tags/uaf/</link>
+      <pubDate>Tue, 28 Jan 2025 14:22:00 +0000</pubDate>
+      <guid>http://leo1.cc/tags/uaf/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Bof</title>
+      <link>http://leo1.cc/tags/bof/</link>
+      <pubDate>Tue, 21 Jan 2025 18:50:00 +0000</pubDate>
+      <guid>http://leo1.cc/tags/bof/</guid>
       <description></description>
     </item>
     <item>
@@ -34,13 +48,6 @@
       <link>http://leo1.cc/tags/heap/</link>
       <pubDate>Tue, 21 Jan 2025 18:49:00 +0000</pubDate>
       <guid>http://leo1.cc/tags/heap/</guid>
-      <description></description>
-    </item>
-    <item>
-      <title>Kernel</title>
-      <link>http://leo1.cc/tags/kernel/</link>
-      <pubDate>Tue, 14 Jan 2025 19:30:00 +0000</pubDate>
-      <guid>http://leo1.cc/tags/kernel/</guid>
       <description></description>
     </item>
     <item>
@@ -86,7 +93,7 @@
       <description></description>
     </item>
     <item>
-      <title>AI</title>
+      <title>Ai</title>
       <link>http://leo1.cc/tags/ai/</link>
       <pubDate>Mon, 03 Jun 2024 12:01:00 +0000</pubDate>
       <guid>http://leo1.cc/tags/ai/</guid>
@@ -135,7 +142,7 @@
       <description></description>
     </item>
     <item>
-      <title>PHP</title>
+      <title>Php</title>
       <link>http://leo1.cc/tags/php/</link>
       <pubDate>Sun, 19 Nov 2023 12:00:00 +0000</pubDate>
       <guid>http://leo1.cc/tags/php/</guid>

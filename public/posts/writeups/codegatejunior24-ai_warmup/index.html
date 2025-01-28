@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <meta name="robots" content="index, follow">
 <title>CodegateJunior24 - ai_warmup | leo_something</title>
-<meta name="keywords" content="AI">
+<meta name="keywords" content="ai">
 <meta name="description" content="Simple AI challenge from the Codegate quals for juniors of 2024 (I made the writeup only because it was required to move to the finals).">
 <meta name="author" content="leo_something">
 <link rel="canonical" href="http://leo1.cc/posts/writeups/codegatejunior24-ai_warmup/">
@@ -64,7 +64,7 @@
     <meta property="article:section" content="posts">
     <meta property="article:published_time" content="2024-06-03T12:01:00+00:00">
     <meta property="article:modified_time" content="2024-06-03T12:01:00+00:00">
-    <meta property="article:tag" content="AI">
+    <meta property="article:tag" content="Ai">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="CodegateJunior24 - ai_warmup">
 <meta name="twitter:description" content="Simple AI challenge from the Codegate quals for juniors of 2024 (I made the writeup only because it was required to move to the finals).">
@@ -98,7 +98,7 @@
   "name": "CodegateJunior24 - ai_warmup",
   "description": "Simple AI challenge from the Codegate quals for juniors of 2024 (I made the writeup only because it was required to move to the finals).",
   "keywords": [
-    "AI"
+    "ai"
   ],
   "articleBody": "CHALLENGE OVERVIEW This challenge is basically a python sandbox, but rather than executing our input, it executes the output given from an AI model. We can ask the AI to write some code and that code is then filtered with the following blacklist and executed.\nblacklist = [ \"cat\", \"grep\", \"nano\", \"subprocess\", \"input\", \"sys\", \"execfile\", \"builtins\", \"dict\", \"for\", \"dir\", \"file\", \"input\", \"write\", \"while\", \"print\", \"int\", \"nc\", \"/dev/tcp/\", \"socket\", \"TCPSocket\", \"curl\", \"wget\", \"request\", \"-display\", \"xhost\", \"bash\", \"sh\", \"\u003c\", \"\u003e\" ] The challenge also implements a POW to prevent us from spamming too much to the AI (I think). The POW can be solved bruteforcing 4 characters:\nfrom pwn import * import string import hashlib r = remote(\"13.125.209.34\", 5334) def solve_pow(): a = string.ascii_letters + string.digits exp = r.recvuntil(b\"Give\").split(b\"\\n\")[0] hash_str = str(exp.split(b\"== \")[1].decode()) salt = exp.split(b\"(\")[1].split(b\" +\")[0].decode() print(f\"salt: {salt}\") print(f\"hash: {hash_str}\") for x0 in a: for x1 in a: for x2 in a: for x3 in a: xxxx = x0 + x1 + x2 + x3 if hashlib.sha256((salt + xxxx).encode()).hexdigest() == hash_str: return xxxx r.sendlineafter(b\":\", solve_pow()) r.interactive() SOLVE First thing I did was asking to open the file /flag but apparently the file didn’t exist, because open('/flag', 'r') returned an error. After some tries and errors I realized that the flag was located at ./flag, but I couldn’t print it with open('./flag','r').read() because exec does not print the output of functions, eval does. After another 30 minutes of searching for a way of printing I decided to try to edit the Fore.RED variable which is used to display colored messages on the console. So the code I wanted GPT to output was something like:\nFore.RED = open('./flag','r').read() Asking politely did the trick!\nassign the contents of ./flag to Fore.RED using Fore.RED = open('./flag','r').read(). DO NOT USE print() FLAG: codegate2024{1023bbd5738200b2ec1132903988e26998201d913edbb0f20b2eda93d7e8c7a24d533f6b91a924eeb0824e62ccce013b}\n",
   "wordCount" : "297",
@@ -203,7 +203,7 @@
     <div style="display: flex; flex-wrap: wrap; gap: 5px;">
       
       <a href="/tags/ai" class="custom-tag">
-        AI
+        ai
       </a>
       
     </div>
