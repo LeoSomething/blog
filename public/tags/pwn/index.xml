@@ -6,8 +6,15 @@
     <description>Recent content in Pwn on leo_something</description>
     <generator>Hugo -- 0.140.2</generator>
     <language>en-us</language>
-    <lastBuildDate>Tue, 28 Jan 2025 14:22:00 +0000</lastBuildDate>
+    <lastBuildDate>Wed, 02 Apr 2025 09:00:00 +0000</lastBuildDate>
     <atom:link href="http://leo1.cc/tags/pwn/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>HTB Cyber Apocalypse 2025 - Vault</title>
+      <link>http://leo1.cc/posts/writeups/htb25-vault/</link>
+      <pubDate>Wed, 02 Apr 2025 09:00:00 +0000</pubDate>
+      <guid>http://leo1.cc/posts/writeups/htb25-vault/</guid>
+      <description>Hardest pwn challenge of the CTF. A simple vulnerability lead to a BOF, but the path to RCE was really interesting</description>
+    </item>
     <item>
       <title>TeamItalyCTF 2022 - FamilyRecipes</title>
       <link>http://leo1.cc/posts/writeups/teamitalyctf22-familyrecipes/</link>
