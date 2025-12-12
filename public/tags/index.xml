@@ -6,20 +6,27 @@
     <description>Recent content in Tags on leo_something</description>
     <generator>Hugo -- 0.140.2</generator>
     <language>en-us</language>
-    <lastBuildDate>Wed, 02 Apr 2025 09:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Fri, 12 Dec 2025 18:55:00 +0000</lastBuildDate>
     <atom:link href="http://leo1.cc/tags/index.xml" rel="self" type="application/rss+xml" />
     <item>
-      <title>Bof</title>
-      <link>http://leo1.cc/tags/bof/</link>
-      <pubDate>Wed, 02 Apr 2025 09:00:00 +0000</pubDate>
-      <guid>http://leo1.cc/tags/bof/</guid>
+      <title>Browser</title>
+      <link>http://leo1.cc/tags/browser/</link>
+      <pubDate>Fri, 12 Dec 2025 18:55:00 +0000</pubDate>
+      <guid>http://leo1.cc/tags/browser/</guid>
       <description></description>
     </item>
     <item>
       <title>Pwn</title>
       <link>http://leo1.cc/tags/pwn/</link>
-      <pubDate>Wed, 02 Apr 2025 09:00:00 +0000</pubDate>
+      <pubDate>Fri, 12 Dec 2025 18:55:00 +0000</pubDate>
       <guid>http://leo1.cc/tags/pwn/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Bof</title>
+      <link>http://leo1.cc/tags/bof/</link>
+      <pubDate>Wed, 02 Apr 2025 09:00:00 +0000</pubDate>
+      <guid>http://leo1.cc/tags/bof/</guid>
       <description></description>
     </item>
     <item>
