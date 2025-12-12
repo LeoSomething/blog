@@ -9,7 +9,7 @@ author: "leo_something & BitFriends"
 ShowToc: true
 ---
 
-Two weeks ago I went to Nanjing, China to take part in the [2025 Qiangwang Challenge on Cyber Mimic Defense Finals](https://ctftime.org/event/2999) with the ARESx team. Me and my buddy [@BitFriends]([https://b17fr13nds.github.io/](https://b17fr13nds.github.io/ "https://b17fr13nds.github.io/")) full cleared pwn during the CTF and in this writeup we are going to talk about a really nice browser challenge we encountered.
+Two weeks ago I went to Nanjing, China to take part in the [2025 Qiangwang Challenge on Cyber Mimic Defense Finals](https://ctftime.org/event/2999) with the ARESx team. Me and my buddy [@BitFriends](https://b17fr13nds.github.io) full cleared pwn during the CTF and in this writeup we are going to talk about a really nice browser challenge we encountered.
 
 ---
 ## Overview
