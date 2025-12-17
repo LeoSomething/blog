@@ -5,7 +5,7 @@ title: 'HTB Cyber Apocalypse 2025 - Vault'
 summary: "Hardest pwn challenge of the CTF. A simple vulnerability lead to a BOF, but the path to RCE was really interesting"
 
 categories: ["Writeups"]
-tags: ["pwn", "bof"]
+tags: [ "bof"]
 author: "leo_something"
 ShowToc: true
 ---

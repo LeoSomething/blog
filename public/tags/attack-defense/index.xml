@@ -22,12 +22,5 @@
       <guid>http://leo1.cc/posts/docs/tulip_setup/</guid>
       <description>Tulip is a traffic analyzer tool made for A/D CTFs, this post walks you throught all the important steps requied to deploy Tulip painlessly (hopefully).</description>
     </item>
-    <item>
-      <title>SaarCTF2023 - Pasteable</title>
-      <link>http://leo1.cc/posts/writeups/saarctf23-pasteable/</link>
-      <pubDate>Sun, 19 Nov 2023 12:00:00 +0000</pubDate>
-      <guid>http://leo1.cc/posts/writeups/saarctf23-pasteable/</guid>
-      <description>This challenge was part of the attack/defense SaarCTF of 2023. This is a web challenge written in PHP, where a wrong use of &amp;ldquo;==&amp;rdquo; led to a type juggling vulnerability.</description>
-    </item>
   </channel>
 </rss>

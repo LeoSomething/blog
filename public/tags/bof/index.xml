@@ -6,8 +6,15 @@
     <description>Recent content in Bof on leo_something</description>
     <generator>Hugo -- 0.140.2</generator>
     <language>en-us</language>
-    <lastBuildDate>Wed, 02 Apr 2025 09:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Wed, 17 Dec 2025 09:00:00 +0000</lastBuildDate>
     <atom:link href="http://leo1.cc/tags/bof/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Seccon Quals 2025 - unserialize</title>
+      <link>http://leo1.cc/posts/writeups/seccon25-unserialize/</link>
+      <pubDate>Wed, 17 Dec 2025 09:00:00 +0000</pubDate>
+      <guid>http://leo1.cc/posts/writeups/seccon25-unserialize/</guid>
+      <description>Warmup challenge featuring a &amp;ldquo;number conversion base confusion&amp;rdquo;.</description>
+    </item>
     <item>
       <title>HTB Cyber Apocalypse 2025 - Vault</title>
       <link>http://leo1.cc/posts/writeups/htb25-vault/</link>

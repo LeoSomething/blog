@@ -5,7 +5,7 @@ title: 'Ret2dlresolve in 64bit binaries'
 summary: "Ret2dlresolve is a really powerful tecnique to use in pwn challenges (even tho it's not frequently seen). It's useful when we don't have libc leaks or don't know the libc version."
 
 categories: ["Docs"]
-tags: ["pwn", "dlresolve"]
+tags: ["ret2dlresolve"]
 author: "leo_something"
 ShowToc: true
 ---

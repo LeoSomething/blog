@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <meta name="robots" content="index, follow">
 <title>Tulip setup for A/D CTFs | leo_something</title>
-<meta name="keywords" content="attack-defense, infra">
+<meta name="keywords" content="attack-defense">
 <meta name="description" content="Tulip is a traffic analyzer tool made for A/D CTFs, this post walks you throught all the important steps requied to deploy Tulip painlessly (hopefully).">
 <meta name="author" content="leo_something">
 <link rel="canonical" href="http://leo1.cc/posts/docs/tulip_setup/">
@@ -65,7 +65,6 @@
     <meta property="article:published_time" content="2024-04-19T12:00:00+00:00">
     <meta property="article:modified_time" content="2024-04-19T12:00:00+00:00">
     <meta property="article:tag" content="Attack-Defense">
-    <meta property="article:tag" content="Infra">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Tulip setup for A/D CTFs">
 <meta name="twitter:description" content="Tulip is a traffic analyzer tool made for A/D CTFs, this post walks you throught all the important steps requied to deploy Tulip painlessly (hopefully).">
@@ -99,7 +98,7 @@
   "name": "Tulip setup for A\/D CTFs",
   "description": "Tulip is a traffic analyzer tool made for A/D CTFs, this post walks you throught all the important steps requied to deploy Tulip painlessly (hopefully).",
   "keywords": [
-    "attack-defense", "infra"
+    "attack-defense"
   ],
   "articleBody": "Setup tulip on the VM Tulip specific configurations Clone the repo\n$ git clone https://github.com/OpenAttackDefenseTools/tulip.git $ cd tulip Edit services/api/configurations.py with the correct tick_length, start_date, vm_ip, and the services\n$ cp .env.example .env edit .env with the correct FLAG_REGEX, TICK_START, TICK_LENGTH and change TRAFFIC_DIR_HOST to point to the correct folder containing the pcaps (in our case /ready_pcaps)\nIf you want tulip to listen on a different port (e.g. port 4444) edit docker-compose.yml and under the frontend service change\nports: - \"3000:3000\" to\nports: - \"4444:3000\" WARNING: (if you host tulip on the vulnbox and don’t change the web interface port you risk other teams to steal flags throght tulip. Yep, they know tulip default port is 3000)\n$ docker compose up -d --build Tulip is now running.\nPacket capturing Save these scripts:\n/create-pcap.sh\n#!/bin/sh # -i game : game is the wireguard network interface, change it as needed mkdir -p /pcaps mkdir -p /ready_pcaps chmod 777 /pcaps chmod 777 /ready_pcaps tcpdump -G 120 -w /pcaps/myfile-%Y-%m-%d_%H.%M.%S.pcap -i game -z '/post-rotate.sh' port not 22 /post-rotate.sh\n#!/bin/sh mkdir -p /ready_pcaps/ mv $1 /ready_pcaps/ Then disable the apparmor profile for tcpdump\n$ apt install apparmor-utils $ aa-complain /usr/bin/tcpdump Now in a tmux or screen:\n$ chmod +x /create-pcap.sh $ chmod +x /post-rotate.sh $ /create-pcap.sh While create-pcap.sh is running, ready_pcaps will be populated with the network pcaps and Tulip will show them on the web interface.s\nSetup Tulip on a dedicated VPS On the vps Clone the repo\n$ git clone https://github.com/OpenAttackDefenseTools/tulip.git $ cd tulip Edit services/api/configurations.py with the correct tick_length, start_date, vm_ip, and the services\n$ cp .env.example .env edit .env with the correct FLAG_REGEX, TICK_START and TICK_LENGTH\nIf you want tulip to only listen on localhost:3000 instead of 0.0.0.0:3000, then edit docker-compose.yml and under the frontend service change\nports: - \"3000:3000\" to\nports: - \"127.0.0.1:3000:3000\" $ docker compose up -d --build Tulip is now running.\nOn the vulnbox Save these scripts:\n/create-pcap.sh\n#!/bin/sh # -i game : game is the wireguard network interface, change it as needed mkdir -p /pcaps mkdir -p /ready_pcaps chmod 777 /pcaps chmod 777 /ready_pcaps tcpdump -G 120 -w /pcaps/myfile-%Y-%m-%d_%H.%M.%S.pcap -i game -z '/post-rotate.sh' port not 22 /post-rotate.sh\n#!/bin/sh mkdir -p /ready_pcaps/ mv $1 /ready_pcaps/ Then disable the apparmor profile for tcpdump\n$ apt install apparmor-utils $ aa-complain /usr/bin/tcpdump Now in a tmux or screen:\n$ chmod +x /create-pcap.sh $ chmod +x /post-rotate.sh $ /create-pcap.sh While create-pcap.sh is running, ready_pcaps will be populated with the network pcaps.\nSend pcaps to tulip The last thing is to send the pcaps to tulip, there are two ways to do it :\n1: The vps has ssh access to the vulnbox, and can scp the pcaps 2: The vps is not in the vpn, so no access to the vulnbox. In this case the vulnbox will have ssh access to the vps (this could be hardened) Case 1: First create an ssh key in the vps and add it in the vulbox.\nThen, on the vps save the script take-pcap.sh:\n#!/usr/bin/bash IP_VULNBOX=10.32.55.2 while true do rsync -avz --remove-source-files root@$IP_VULNBOX:/ready_pcaps/* CHANGE_ME_TRAFFIC_DIR_HOST sleep 10 # tweak this as you like done Now open a tmux and run this script, tulip will receive the pcaps.\nCase 2: First create an ssh key in the vulnbox and add it in the vps.\nThen, on the vulnbox save the script take-pcap.sh:\n#!/usr/bin/bash IP_VPS=10.32.55.2 # remember to change this while true do rsync -avz --remove-source-files /ready_pcaps/* root@$IP_VPS:CHANGE_ME_TRAFFIC_DIR_HOST sleep 10 # tweak this as you like done Now open a tmux and run this script, tulip will receive the pcaps.\nCHANGE_ME_TRAFFIC_DIR_HOST is the absolute path to the TRAFFIC_DIR_HOST value in the .env you wrote when configuring tulip.\n",
   "wordCount" : "608",
@@ -205,10 +204,6 @@
       
       <a href="/tags/attack-defense" class="custom-tag">
         attack-defense
-      </a>
-      
-      <a href="/tags/infra" class="custom-tag">
-        infra
       </a>
       
     </div>

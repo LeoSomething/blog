@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>C&#43;&#43; on leo_something</title>
+    <link>http://leo1.cc/tags/c&#43;&#43;/</link>
+    <description>Recent content in C&#43;&#43; on leo_something</description>
+    <generator>Hugo -- 0.140.2</generator>
+    <language>en-us</language>
+    <lastBuildDate>Wed, 17 Dec 2025 09:00:00 +0000</lastBuildDate>
+    <atom:link href="http://leo1.cc/tags/c++/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Seccon Quals 2025 - CursedST</title>
+      <link>http://leo1.cc/posts/writeups/seccon25-cursedst/</link>
+      <pubDate>Wed, 17 Dec 2025 09:00:00 +0000</pubDate>
+      <guid>http://leo1.cc/posts/writeups/seccon25-cursedst/</guid>
+      <description>Pop on an empty std::stack?!</description>
+    </item>
+  </channel>
+</rss>

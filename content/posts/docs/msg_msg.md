@@ -5,7 +5,7 @@ title: 'Kpwn tecniques: struct msg_msg'
 summary: "msg_msg is a really powerful and elastic kernel struct that can be abused to obtain strong primitives, such as arbitrary read/write/free."
 
 categories: ["Docs"]
-tags: ["kernel", "pwn"]
+tags: ["kpwn"]
 author: "leo_something"
 ShowToc: true
 ---

@@ -5,12 +5,10 @@ title: 'Srdnlen 2025 - Snowstorm'
 summary: "Interesting pwn challenge regarding the exploitation of a simple stack BOF."
 
 categories: ["Writeups"]
-tags: ["pwn", "bof", "stack pivoting"]
-author: "about:blankets"
+tags: [ "bof", "stack pivoting"]
+author: "leo_something & Lotus"
 ShowToc: true
 ---
-
-> Most of the challenge was solved by @Lotus
 
 ## Overview
 

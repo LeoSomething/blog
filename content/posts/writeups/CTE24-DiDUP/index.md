@@ -6,7 +6,7 @@ summary: "This is an hard pwn challenge I wrote for
 Compete Against TeamEurope, this CTF was part of the training for ECSC2024. The vulnerability is a double-free triggerable through a race condition. No bruteforce is needed."
 
 categories: ["Writeups"]
-tags: ["pwn", "heap", "race condition"]
+tags: [ "heap", "race condition"]
 author: "leo_something"
 ShowToc: true
 ---

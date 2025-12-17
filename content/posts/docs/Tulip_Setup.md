@@ -5,7 +5,7 @@ title: 'Tulip setup for A/D CTFs'
 summary: "Tulip is a traffic analyzer tool made for A/D CTFs, this post walks you throught all the important steps requied to deploy Tulip painlessly (hopefully)."
 
 categories: ["Docs"]
-tags: ["attack-defense", "infra"]
+tags: ["attack-defense"]
 author: "leo_something"
 ShowToc: true
 ---

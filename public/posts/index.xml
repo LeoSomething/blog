@@ -6,8 +6,22 @@
     <description>Recent content in Posts on leo_something</description>
     <generator>Hugo -- 0.140.2</generator>
     <language>en-us</language>
-    <lastBuildDate>Fri, 12 Dec 2025 18:55:00 +0000</lastBuildDate>
+    <lastBuildDate>Wed, 17 Dec 2025 09:00:00 +0000</lastBuildDate>
     <atom:link href="http://leo1.cc/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Seccon Quals 2025 - CursedST</title>
+      <link>http://leo1.cc/posts/writeups/seccon25-cursedst/</link>
+      <pubDate>Wed, 17 Dec 2025 09:00:00 +0000</pubDate>
+      <guid>http://leo1.cc/posts/writeups/seccon25-cursedst/</guid>
+      <description>Pop on an empty std::stack?!</description>
+    </item>
+    <item>
+      <title>Seccon Quals 2025 - unserialize</title>
+      <link>http://leo1.cc/posts/writeups/seccon25-unserialize/</link>
+      <pubDate>Wed, 17 Dec 2025 09:00:00 +0000</pubDate>
+      <guid>http://leo1.cc/posts/writeups/seccon25-unserialize/</guid>
+      <description>Warmup challenge featuring a &amp;ldquo;number conversion base confusion&amp;rdquo;.</description>
+    </item>
     <item>
       <title>Mimic 2025 - Cherry</title>
       <link>http://leo1.cc/posts/writeups/mimic25-cherry/</link>
@@ -79,32 +93,11 @@
       <description>Ret2dlresolve is a really powerful tecnique to use in pwn challenges (even tho it&amp;rsquo;s not frequently seen). It&amp;rsquo;s useful when we don&amp;rsquo;t have libc leaks or don&amp;rsquo;t know the libc version.</description>
     </item>
     <item>
-      <title>CodegateJunior24 - Othernote</title>
-      <link>http://leo1.cc/posts/writeups/codegatejunior24-othernote/</link>
-      <pubDate>Mon, 03 Jun 2024 12:03:00 +0000</pubDate>
-      <guid>http://leo1.cc/posts/writeups/codegatejunior24-othernote/</guid>
-      <description>Simple web challenge about prototype pollution in python. It was part of the Codegate quals for juniors of 2024 (I made the writeup only because it was required to move to the finals).</description>
-    </item>
-    <item>
       <title>CodegateJunior24 - Baby Heap</title>
       <link>http://leo1.cc/posts/writeups/codegatejunior24-baby_heap/</link>
       <pubDate>Mon, 03 Jun 2024 12:02:00 +0000</pubDate>
       <guid>http://leo1.cc/posts/writeups/codegatejunior24-baby_heap/</guid>
       <description>Heap challenge from the Codegate quals for juniors of 2024. The vulnerability was an heap overflow that enabled an attacker to gain overlapping chunks, therefore arb read and write.</description>
-    </item>
-    <item>
-      <title>CodegateJunior24 - ai_warmup</title>
-      <link>http://leo1.cc/posts/writeups/codegatejunior24-ai_warmup/</link>
-      <pubDate>Mon, 03 Jun 2024 12:01:00 +0000</pubDate>
-      <guid>http://leo1.cc/posts/writeups/codegatejunior24-ai_warmup/</guid>
-      <description>Simple AI challenge from the Codegate quals for juniors of 2024 (I made the writeup only because it was required to move to the finals).</description>
-    </item>
-    <item>
-      <title>CodegateJunior24 - easy_reversing</title>
-      <link>http://leo1.cc/posts/writeups/codegatejunior24-easy_reversing/</link>
-      <pubDate>Mon, 03 Jun 2024 12:00:00 +0000</pubDate>
-      <guid>http://leo1.cc/posts/writeups/codegatejunior24-easy_reversing/</guid>
-      <description>Intresting python-compiled (pyc) reverse-engineering challenge from the Codegate quals for juniors of 2024.</description>
     </item>
     <item>
       <title>OpenECSC Round 3 - Log4x86</title>
@@ -126,27 +119,6 @@
       <pubDate>Fri, 19 Apr 2024 12:00:00 +0000</pubDate>
       <guid>http://leo1.cc/posts/docs/tulip_setup/</guid>
       <description>Tulip is a traffic analyzer tool made for A/D CTFs, this post walks you throught all the important steps requied to deploy Tulip painlessly (hopefully).</description>
-    </item>
-    <item>
-      <title>LaCTF24 - Glottem</title>
-      <link>http://leo1.cc/posts/writeups/lactf24-glottem/</link>
-      <pubDate>Fri, 23 Feb 2024 12:00:00 +0000</pubDate>
-      <guid>http://leo1.cc/posts/writeups/lactf24-glottem/</guid>
-      <description>This reverse-engineering challenge was part of LaCTF 2024. What we faced was a flag checker script written in both python and javascript. Sounds fun right?</description>
-    </item>
-    <item>
-      <title>SnakeCTF23 - Stressful Reader</title>
-      <link>http://leo1.cc/posts/writeups/snakectf23-stressful_reader/</link>
-      <pubDate>Tue, 12 Dec 2023 12:00:00 +0000</pubDate>
-      <guid>http://leo1.cc/posts/writeups/snakectf23-stressful_reader/</guid>
-      <description>Pyjail challenge from SnakeCTF 2023.</description>
-    </item>
-    <item>
-      <title>SaarCTF2023 - Pasteable</title>
-      <link>http://leo1.cc/posts/writeups/saarctf23-pasteable/</link>
-      <pubDate>Sun, 19 Nov 2023 12:00:00 +0000</pubDate>
-      <guid>http://leo1.cc/posts/writeups/saarctf23-pasteable/</guid>
-      <description>This challenge was part of the attack/defense SaarCTF of 2023. This is a web challenge written in PHP, where a wrong use of &amp;ldquo;==&amp;rdquo; led to a type juggling vulnerability.</description>
     </item>
   </channel>
 </rss>

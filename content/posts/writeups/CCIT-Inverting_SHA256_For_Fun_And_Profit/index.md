@@ -4,7 +4,7 @@ draft: true
 title: 'CCIT Training - Inverting SHA256 For Fun And Profit'
 
 categories: ["Writeups"]
-tags: ["pwn", "code injection"]
+tags: [ "code injection"]
 author: "leo_something"
 ---
 

@@ -5,7 +5,7 @@ title: 'UIUCTF24 - Pwnymalloc'
 summary: "Pwnymalloc is a nice custom allocator challenge from UIUCTF 2024. The vulnerability was about an incorrect handling of the prev_size during consolitation."
 
 categories: ["Writeups"]
-tags: ["pwn", "heap", "custom allocator"]
+tags: [ "heap", "custom allocator"]
 author: "leo_something"
 
 ShowToc: true

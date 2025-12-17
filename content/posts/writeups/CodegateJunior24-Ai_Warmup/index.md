@@ -1,6 +1,6 @@
 ---
 date: '2024-06-03T12:01:00Z'
-draft: false
+draft: true
 title: 'CodegateJunior24 - ai_warmup'
 summary: "Simple AI challenge from the Codegate quals for juniors of 2024 (I made the writeup only because it was required to move to the finals)."
 

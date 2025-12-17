@@ -1,6 +1,6 @@
 ---
 date: '2024-06-03T12:03:00Z'
-draft: false
+draft: true
 title: 'CodegateJunior24 - Othernote'
 summary: "Simple web challenge about prototype pollution in python. It was part of the Codegate quals for juniors of 2024 (I made the writeup only because it was required to move to the finals)."
 

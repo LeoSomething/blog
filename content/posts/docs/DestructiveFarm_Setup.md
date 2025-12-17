@@ -7,7 +7,7 @@ what it does is running exploits every tick to retrieve flags and
 automatically submit them to the checker."
 
 categories: ["Docs"]
-tags: ["attack-defense", "infra"]
+tags: ["attack-defense"]
 author: "team bhackari"
 ShowToc: true
 ---

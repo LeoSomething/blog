@@ -1,6 +1,6 @@
 ---
 date: '2023-12-12T12:00:00Z'
-draft: false
+draft: true
 title: 'SnakeCTF23 - Stressful Reader'
 summary: "Pyjail challenge from SnakeCTF 2023."
 

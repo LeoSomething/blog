@@ -5,7 +5,7 @@ title: 'OpenECSC Round 3 - Log4x86'
 summary: "This challenge comes from the 3rd round of openECSC 2024. The challenge was really really interesting: the exploitation tecnique involved a buffer overflow through a really short format string vulnerability."
 
 categories: ["Writeups"]
-tags: ["pwn", "format string", "bof"]
+tags: [ "format string", "bof"]
 author: "leo_something"
 ShowToc: True
 ---

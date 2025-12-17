@@ -5,7 +5,7 @@ title: 'CodegateJunior24 - Baby Heap'
 summary: "Heap challenge from the Codegate quals for juniors of 2024. The vulnerability was an heap overflow that enabled an attacker to gain overlapping chunks, therefore arb read and write."
 
 categories: ["Writeups"]
-tags: ["pwn", "heap"]
+tags: [ "heap"]
 author: "leo_something"
 ShowToc: true
 ---

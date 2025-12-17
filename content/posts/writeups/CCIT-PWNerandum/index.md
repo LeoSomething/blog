@@ -4,7 +4,7 @@ draft: true
 title: 'CCIT Training - PWNerandum'
 
 categories: ["Writeups"]
-tags: ["pwn", "stack overflow"]
+tags: [ "stack overflow"]
 author: "leo_something"
 ---
 

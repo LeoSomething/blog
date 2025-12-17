@@ -2,37 +2,46 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>http://leo1.cc/tags/browser/</loc>
-    <lastmod>2025-12-12T18:55:00+00:00</lastmod>
+    <loc>http://leo1.cc/tags/bof/</loc>
+    <lastmod>2025-12-17T09:00:00+00:00</lastmod>
+  </url><url>
+    <loc>http://leo1.cc/tags/c&#43;&#43;/</loc>
+    <lastmod>2025-12-17T09:00:00+00:00</lastmod>
   </url><url>
     <loc>http://leo1.cc/categories/</loc>
-    <lastmod>2025-12-12T18:55:00+00:00</lastmod>
+    <lastmod>2025-12-17T09:00:00+00:00</lastmod>
+  </url><url>
+    <loc>http://leo1.cc/tags/heap/</loc>
+    <lastmod>2025-12-17T09:00:00+00:00</lastmod>
   </url><url>
     <loc>http://leo1.cc/</loc>
+    <lastmod>2025-12-17T09:00:00+00:00</lastmod>
+  </url><url>
+    <loc>http://leo1.cc/posts/</loc>
+    <lastmod>2025-12-17T09:00:00+00:00</lastmod>
+  </url><url>
+    <loc>http://leo1.cc/posts/writeups/seccon25-cursedst/</loc>
+    <lastmod>2025-12-17T09:00:00+00:00</lastmod>
+  </url><url>
+    <loc>http://leo1.cc/posts/writeups/seccon25-unserialize/</loc>
+    <lastmod>2025-12-17T09:00:00+00:00</lastmod>
+  </url><url>
+    <loc>http://leo1.cc/tags/</loc>
+    <lastmod>2025-12-17T09:00:00+00:00</lastmod>
+  </url><url>
+    <loc>http://leo1.cc/categories/writeups/</loc>
+    <lastmod>2025-12-17T09:00:00+00:00</lastmod>
+  </url><url>
+    <loc>http://leo1.cc/tags/browser-pwn/</loc>
     <lastmod>2025-12-12T18:55:00+00:00</lastmod>
   </url><url>
     <loc>http://leo1.cc/posts/writeups/mimic25-cherry/</loc>
     <lastmod>2025-12-12T18:55:00+00:00</lastmod>
   </url><url>
-    <loc>http://leo1.cc/posts/</loc>
-    <lastmod>2025-12-12T18:55:00+00:00</lastmod>
-  </url><url>
-    <loc>http://leo1.cc/tags/pwn/</loc>
-    <lastmod>2025-12-12T18:55:00+00:00</lastmod>
-  </url><url>
-    <loc>http://leo1.cc/tags/</loc>
-    <lastmod>2025-12-12T18:55:00+00:00</lastmod>
-  </url><url>
-    <loc>http://leo1.cc/categories/writeups/</loc>
-    <lastmod>2025-12-12T18:55:00+00:00</lastmod>
-  </url><url>
-    <loc>http://leo1.cc/tags/bof/</loc>
-    <lastmod>2025-04-02T09:00:00+00:00</lastmod>
-  </url><url>
     <loc>http://leo1.cc/posts/writeups/htb25-vault/</loc>
     <lastmod>2025-04-02T09:00:00+00:00</lastmod>
   </url><url>
-    <loc>http://leo1.cc/tags/kernel/</loc>
+    <loc>http://leo1.cc/tags/kpwn/</loc>
     <lastmod>2025-01-28T14:22:00+00:00</lastmod>
   </url><url>
     <loc>http://leo1.cc/posts/writeups/teamitalyctf22-familyrecipes/</loc>
@@ -46,9 +55,6 @@
   </url><url>
     <loc>http://leo1.cc/tags/stack-pivoting/</loc>
     <lastmod>2025-01-21T18:50:00+00:00</lastmod>
-  </url><url>
-    <loc>http://leo1.cc/tags/heap/</loc>
-    <lastmod>2025-01-21T18:49:00+00:00</lastmod>
   </url><url>
     <loc>http://leo1.cc/posts/writeups/srdnlen25-kinderheim_511/</loc>
     <lastmod>2025-01-21T18:49:00+00:00</lastmod>
@@ -74,38 +80,14 @@
     <loc>http://leo1.cc/posts/writeups/uiuctf24-pwnymalloc/</loc>
     <lastmod>2024-07-08T12:00:00+00:00</lastmod>
   </url><url>
-    <loc>http://leo1.cc/tags/dlresolve/</loc>
+    <loc>http://leo1.cc/tags/ret2dlresolve/</loc>
     <lastmod>2024-06-12T12:00:00+00:00</lastmod>
   </url><url>
     <loc>http://leo1.cc/posts/docs/ret2dlresolve/</loc>
     <lastmod>2024-06-12T12:00:00+00:00</lastmod>
   </url><url>
-    <loc>http://leo1.cc/posts/writeups/codegatejunior24-othernote/</loc>
-    <lastmod>2024-06-03T12:03:00+00:00</lastmod>
-  </url><url>
-    <loc>http://leo1.cc/tags/prototype-pollution/</loc>
-    <lastmod>2024-06-03T12:03:00+00:00</lastmod>
-  </url><url>
-    <loc>http://leo1.cc/tags/python/</loc>
-    <lastmod>2024-06-03T12:03:00+00:00</lastmod>
-  </url><url>
-    <loc>http://leo1.cc/tags/web/</loc>
-    <lastmod>2024-06-03T12:03:00+00:00</lastmod>
-  </url><url>
     <loc>http://leo1.cc/posts/writeups/codegatejunior24-baby_heap/</loc>
     <lastmod>2024-06-03T12:02:00+00:00</lastmod>
-  </url><url>
-    <loc>http://leo1.cc/tags/ai/</loc>
-    <lastmod>2024-06-03T12:01:00+00:00</lastmod>
-  </url><url>
-    <loc>http://leo1.cc/posts/writeups/codegatejunior24-ai_warmup/</loc>
-    <lastmod>2024-06-03T12:01:00+00:00</lastmod>
-  </url><url>
-    <loc>http://leo1.cc/posts/writeups/codegatejunior24-easy_reversing/</loc>
-    <lastmod>2024-06-03T12:00:00+00:00</lastmod>
-  </url><url>
-    <loc>http://leo1.cc/tags/rev/</loc>
-    <lastmod>2024-06-03T12:00:00+00:00</lastmod>
   </url><url>
     <loc>http://leo1.cc/tags/format-string/</loc>
     <lastmod>2024-05-25T12:00:00+00:00</lastmod>
@@ -119,32 +101,8 @@
     <loc>http://leo1.cc/posts/docs/destructivefarm_setup/</loc>
     <lastmod>2024-04-19T12:01:00+00:00</lastmod>
   </url><url>
-    <loc>http://leo1.cc/tags/infra/</loc>
-    <lastmod>2024-04-19T12:01:00+00:00</lastmod>
-  </url><url>
     <loc>http://leo1.cc/posts/docs/tulip_setup/</loc>
     <lastmod>2024-04-19T12:00:00+00:00</lastmod>
-  </url><url>
-    <loc>http://leo1.cc/posts/writeups/lactf24-glottem/</loc>
-    <lastmod>2024-02-23T12:00:00+00:00</lastmod>
-  </url><url>
-    <loc>http://leo1.cc/tags/misc/</loc>
-    <lastmod>2023-12-12T12:00:00+00:00</lastmod>
-  </url><url>
-    <loc>http://leo1.cc/tags/pyjail/</loc>
-    <lastmod>2023-12-12T12:00:00+00:00</lastmod>
-  </url><url>
-    <loc>http://leo1.cc/posts/writeups/snakectf23-stressful_reader/</loc>
-    <lastmod>2023-12-12T12:00:00+00:00</lastmod>
-  </url><url>
-    <loc>http://leo1.cc/tags/php/</loc>
-    <lastmod>2023-11-19T12:00:00+00:00</lastmod>
-  </url><url>
-    <loc>http://leo1.cc/posts/writeups/saarctf23-pasteable/</loc>
-    <lastmod>2023-11-19T12:00:00+00:00</lastmod>
-  </url><url>
-    <loc>http://leo1.cc/tags/type-confusion/</loc>
-    <lastmod>2023-11-19T12:00:00+00:00</lastmod>
   </url><url>
     <loc>http://leo1.cc/search/</loc>
   </url>

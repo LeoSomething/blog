@@ -6,12 +6,10 @@ summary: "Heap challenge with the goal of achieving arbitrary write
 to read the flag from the heap."
 
 categories: ["Writeups"]
-tags: ["pwn", "heap"]
-author: "about:blankets"
+tags: [ "heap"]
+author: "leo_something & Lotus"
 ShowToc: true
 ---
-
-> This challenge was solved by me and @Lotus
 
 ## Overview
 

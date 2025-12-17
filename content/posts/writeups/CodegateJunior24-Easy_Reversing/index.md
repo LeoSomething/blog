@@ -1,6 +1,6 @@
 ---
 date: '2024-06-03T12:00:00Z'
-draft: false
+draft: true
 title: 'CodegateJunior24 - easy_reversing'
 summary: "Intresting python-compiled (pyc) reverse-engineering challenge from the Codegate quals for juniors of 2024."
 

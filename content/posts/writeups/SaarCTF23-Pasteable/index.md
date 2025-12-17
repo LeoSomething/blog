@@ -1,6 +1,6 @@
 ---
 date: '2023-11-19T12:00:00Z'
-draft: false
+draft: true
 title: 'SaarCTF2023 - Pasteable'
 summary: "This challenge was part of the attack/defense SaarCTF of 2023. This is a web challenge written in PHP, where a wrong use of \"==\" led to a type juggling vulnerability."
 

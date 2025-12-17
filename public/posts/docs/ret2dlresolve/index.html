@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <meta name="robots" content="index, follow">
 <title>Ret2dlresolve in 64bit binaries | leo_something</title>
-<meta name="keywords" content="pwn, dlresolve">
+<meta name="keywords" content="ret2dlresolve">
 <meta name="description" content="Ret2dlresolve is a really powerful tecnique to use in pwn challenges (even tho it&rsquo;s not frequently seen). It&rsquo;s useful when we don&rsquo;t have libc leaks or don&rsquo;t know the libc version.">
 <meta name="author" content="leo_something">
 <link rel="canonical" href="http://leo1.cc/posts/docs/ret2dlresolve/">
@@ -64,8 +64,7 @@
     <meta property="article:section" content="posts">
     <meta property="article:published_time" content="2024-06-12T12:00:00+00:00">
     <meta property="article:modified_time" content="2024-06-12T12:00:00+00:00">
-    <meta property="article:tag" content="Pwn">
-    <meta property="article:tag" content="Dlresolve">
+    <meta property="article:tag" content="Ret2dlresolve">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Ret2dlresolve in 64bit binaries">
 <meta name="twitter:description" content="Ret2dlresolve is a really powerful tecnique to use in pwn challenges (even tho it&rsquo;s not frequently seen). It&rsquo;s useful when we don&rsquo;t have libc leaks or don&rsquo;t know the libc version.">
@@ -99,7 +98,7 @@
   "name": "Ret2dlresolve in 64bit binaries",
   "description": "Ret2dlresolve is a really powerful tecnique to use in pwn challenges (even tho it\u0026rsquo;s not frequently seen). It\u0026rsquo;s useful when we don\u0026rsquo;t have libc leaks or don\u0026rsquo;t know the libc version.",
   "keywords": [
-    "pwn", "dlresolve"
+    "ret2dlresolve"
   ],
   "articleBody": "Overview Use a the function _dl_runtime_resolve_xsavec ( link_map , reloc_arg ) to relocate an arbitrary symbol (e.g. system) and call that function.\nStructures There are 3 struct that handle the relocation process: JMPREL, STRTAB, DYNSYM.\nJMPREL (.rela.plt) This stores a relocation table\nLOAD:04005C0 ; ELF JMPREL Relocation Table LOAD:04005C0 Elf64_Rela \u003c404018h, 200000007h, 0\u003e ; R_X86_64_JUMP_SLOT write LOAD:04005D8 Elf64_Rela \u003c404020h, 300000007h, 0\u003e ; R_X86_64_JUMP_SLOT strlen LOAD:04005F0 Elf64_Rela \u003c404028h, 400000007h, 0\u003e ; R_X86_64_JUMP_SLOT setbuf LOAD:0400608 Elf64_Rela \u003c404030h, 500000007h, 0\u003e ; R_X86_64_JUMP_SLOT read example of relocation table\nThe type of these entries is Elf64_Rela, which is defined as follows. The size of one entry is 24 bytes.\ntypedef struct { Elf64_Addr r_offset; /* 64 bit - Address */ Elf64_Xword r_info; /* 64 bit - Relocation type and symbol index */ Elf64_Sxword r_addend; /* 64 bit - Addend */ } Elf64_Rela; // 24 bytes /* How to extract and insert information held in the r_info field.*/ #define ELF64_R_SYM(i) ((i) \u003e\u003e 32) #define ELF64_R_TYPE(i) ((i) \u0026 0xffffffff) #define ELF64_R_INFO(sym,type) ((((Elf64_Xword) (sym)) \u003c\u003c 32) + (type)) ELF64_R_SYM(r_info) gives the index of the Elf64_Sym in DYNSYM for the specified symbol. ELF64_R_TYPE(r_info) must be equal to 7. DYNSYM (.dynsym) LOAD:04003D8 ; ELF Symbol Table LOAD:04003D8 Elf64_Sym \u003c0\u003e LOAD:04003F0 Elf64_Sym ; \"__libc_start_main\" LOAD:0400408 Elf64_Sym ; \"write\" LOAD:0400420 Elf64_Sym ; \"strlen\" LOAD:0400438 Elf64_Sym ; \"setbuf\" LOAD:0400450 Elf64_Sym ; \"read\" example of symbol table\nThis table holds relevant symbol information. Each entry is a Elf32_Sym structure and its size is 24 bytes.\ntypedef struct { Elf64_Word st_name; /* 32bit - Symbol name (string tbl index) */ unsigned char st_info; /* Symbol type and binding */ unsigned char st_other; /* Symbol visibility */ Elf64_Section st_shndx; /* 16 bits - Section index */ Elf64_Addr st_value; /* 64 bits - Symbol value */ Elf64_Xword st_size; /* 64 bits - Symbol size */ } Elf64_Sym; // 24 bytes Only st_name is important for the exploit.\nSTRTAB (.dynstr) STRTAB is a simple table that stores the strings for symbols name.\n0x804822c:\t\"\" 0x804822d:\t\"libc.so.6\" 0x8048237:\t\"_IO_stdin_used\" 0x8048246:\t\"read\" 0x804824b:\t\"alarm\" 0x8048251:\t\"__libc_start_main\" 0x8048263:\t\"__gmon_start__\" 0x8048272:\t\"GLIBC_2.0\" example of STRTAB\nSummary of GDB commands Get JMPREL:\ngef➤ x/3xg (JMPREL) + (reloc_arg) * 24\nsymbol_number = r_info » 32\ntype = r_info \u0026 0xffffffff\nGet SYMTAB:\ngef➤ x/3xg (SYMTAB) + (symbol_number) * 24\nGet STRTAB:\ngef➤ x/s (STRTAB) + (st_name)\nRelocation summary A typical relocation goes as follows:\nCall _dl_runtime_resolve_xsavec ( link_map , reloc_arg ) where link_map is a list with all the loaded libraries and reloc_arg is the offset of the Elf64_Rela entry in JMPREL Knowing the address of the Elf36_Rela for the specified symbol get r_info Get R_SYM with `r_info » 32 (ELF64_R_SYM macro) Get st_name from the Elf64_Sym entry with DYNSYM + R_SYM*24 Get the symbol with STRTAB + st_name Search for that symbol in link_map and then write its address to the correct GOT entry using r_offset from Elf64_Rela Finally call the relocated function EXPLOIT Forge Elf64_Rela so that DYNSYM + (r_info\u003e\u003e8)*24 points to a forged Elf64_Sym Forge Elf64_Sym so that st_name points to \"system\" Call _dl_runtime_resolve ( link_map , rel_offset ) ",
   "wordCount" : "558",
@@ -203,12 +202,8 @@
   <div class="tags" style="padding: 2px;">
     <div style="display: flex; flex-wrap: wrap; gap: 5px;">
       
-      <a href="/tags/pwn" class="custom-tag">
-        pwn
-      </a>
-      
-      <a href="/tags/dlresolve" class="custom-tag">
-        dlresolve
+      <a href="/tags/ret2dlresolve" class="custom-tag">
+        ret2dlresolve
       </a>
       
     </div>

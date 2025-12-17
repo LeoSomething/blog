@@ -1,6 +1,6 @@
 ---
 date: '2024-02-23T12:00:00Z'
-draft: false
+draft: true
 title: 'LaCTF24 - Glottem'
 summary: "This reverse-engineering challenge was part of LaCTF 2024. What we faced was a flag checker script written in both python and javascript. 
 Sounds fun right?"

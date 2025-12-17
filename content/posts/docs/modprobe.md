@@ -5,7 +5,7 @@ title: 'Kpwn tecniques: modprobe_path'
 summary: "modprobe_path is a global variable that in most kernels is RW. This variable is contains a path to an executable, do you see where this is going..?"
 
 categories: ["Docs"]
-tags: ["kernel", "pwn"]
+tags: ["kpwn"]
 author: "leo_something"
 ---
 

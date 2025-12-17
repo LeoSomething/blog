@@ -5,7 +5,7 @@ title: 'TeamItalyCTF 2022 - FamilyRecipes'
 summary: "This is one of the first heap related kernel challenges I solved, so this writeup could be inaccurate in some spots."
 
 categories: ["Writeups"]
-tags: ["pwn", "kernel", "uaf"]
+tags: ["kpwn", "uaf"]
 author: "leo_something"
 ShowToc: true
 ---

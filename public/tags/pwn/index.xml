@@ -6,43 +6,8 @@
     <description>Recent content in Pwn on leo_something</description>
     <generator>Hugo -- 0.140.2</generator>
     <language>en-us</language>
-    <lastBuildDate>Fri, 12 Dec 2025 18:55:00 +0000</lastBuildDate>
+    <lastBuildDate>Tue, 14 Jan 2025 19:30:00 +0000</lastBuildDate>
     <atom:link href="http://leo1.cc/tags/pwn/index.xml" rel="self" type="application/rss+xml" />
-    <item>
-      <title>Mimic 2025 - Cherry</title>
-      <link>http://leo1.cc/posts/writeups/mimic25-cherry/</link>
-      <pubDate>Fri, 12 Dec 2025 18:55:00 +0000</pubDate>
-      <guid>http://leo1.cc/posts/writeups/mimic25-cherry/</guid>
-      <description>Exploiting jerryscript in China</description>
-    </item>
-    <item>
-      <title>HTB Cyber Apocalypse 2025 - Vault</title>
-      <link>http://leo1.cc/posts/writeups/htb25-vault/</link>
-      <pubDate>Wed, 02 Apr 2025 09:00:00 +0000</pubDate>
-      <guid>http://leo1.cc/posts/writeups/htb25-vault/</guid>
-      <description>Hardest pwn challenge of the CTF. A simple vulnerability lead to a BOF, but the path to RCE was really interesting</description>
-    </item>
-    <item>
-      <title>TeamItalyCTF 2022 - FamilyRecipes</title>
-      <link>http://leo1.cc/posts/writeups/teamitalyctf22-familyrecipes/</link>
-      <pubDate>Tue, 28 Jan 2025 14:22:00 +0000</pubDate>
-      <guid>http://leo1.cc/posts/writeups/teamitalyctf22-familyrecipes/</guid>
-      <description>This is one of the first heap related kernel challenges I solved, so this writeup could be inaccurate in some spots.</description>
-    </item>
-    <item>
-      <title>Srdnlen 2025 - Snowstorm</title>
-      <link>http://leo1.cc/posts/writeups/srdnlen25-snowstorm/</link>
-      <pubDate>Tue, 21 Jan 2025 18:50:00 +0000</pubDate>
-      <guid>http://leo1.cc/posts/writeups/srdnlen25-snowstorm/</guid>
-      <description>Interesting pwn challenge regarding the exploitation of a simple stack BOF.</description>
-    </item>
-    <item>
-      <title>Srdnlen 2025 - Kinderheim 511</title>
-      <link>http://leo1.cc/posts/writeups/srdnlen25-kinderheim_511/</link>
-      <pubDate>Tue, 21 Jan 2025 18:49:00 +0000</pubDate>
-      <guid>http://leo1.cc/posts/writeups/srdnlen25-kinderheim_511/</guid>
-      <description>Heap challenge with the goal of achieving arbitrary write to read the flag from the heap.</description>
-    </item>
     <item>
       <title>Kpwn tecniques: modprobe_path</title>
       <link>http://leo1.cc/posts/docs/modprobe/</link>
@@ -58,39 +23,11 @@
       <description>msg_msg is a really powerful and elastic kernel struct that can be abused to obtain strong primitives, such as arbitrary read/write/free.</description>
     </item>
     <item>
-      <title>CTE24 - DiDUP</title>
-      <link>http://leo1.cc/posts/writeups/cte24-didup/</link>
-      <pubDate>Mon, 16 Sep 2024 12:00:00 +0000</pubDate>
-      <guid>http://leo1.cc/posts/writeups/cte24-didup/</guid>
-      <description>This is an hard pwn challenge I wrote for Compete Against TeamEurope, this CTF was part of the training for ECSC2024. The vulnerability is a double-free triggerable through a race condition. No bruteforce is needed.</description>
-    </item>
-    <item>
-      <title>UIUCTF24 - Pwnymalloc</title>
-      <link>http://leo1.cc/posts/writeups/uiuctf24-pwnymalloc/</link>
-      <pubDate>Mon, 08 Jul 2024 12:00:00 +0000</pubDate>
-      <guid>http://leo1.cc/posts/writeups/uiuctf24-pwnymalloc/</guid>
-      <description>Pwnymalloc is a nice custom allocator challenge from UIUCTF 2024. The vulnerability was about an incorrect handling of the prev_size during consolitation.</description>
-    </item>
-    <item>
       <title>Ret2dlresolve in 64bit binaries</title>
       <link>http://leo1.cc/posts/docs/ret2dlresolve/</link>
       <pubDate>Wed, 12 Jun 2024 12:00:00 +0000</pubDate>
       <guid>http://leo1.cc/posts/docs/ret2dlresolve/</guid>
       <description>Ret2dlresolve is a really powerful tecnique to use in pwn challenges (even tho it&amp;rsquo;s not frequently seen). It&amp;rsquo;s useful when we don&amp;rsquo;t have libc leaks or don&amp;rsquo;t know the libc version.</description>
-    </item>
-    <item>
-      <title>CodegateJunior24 - Baby Heap</title>
-      <link>http://leo1.cc/posts/writeups/codegatejunior24-baby_heap/</link>
-      <pubDate>Mon, 03 Jun 2024 12:02:00 +0000</pubDate>
-      <guid>http://leo1.cc/posts/writeups/codegatejunior24-baby_heap/</guid>
-      <description>Heap challenge from the Codegate quals for juniors of 2024. The vulnerability was an heap overflow that enabled an attacker to gain overlapping chunks, therefore arb read and write.</description>
-    </item>
-    <item>
-      <title>OpenECSC Round 3 - Log4x86</title>
-      <link>http://leo1.cc/posts/writeups/openecscr3-log4x86/</link>
-      <pubDate>Sat, 25 May 2024 12:00:00 +0000</pubDate>
-      <guid>http://leo1.cc/posts/writeups/openecscr3-log4x86/</guid>
-      <description>This challenge comes from the 3rd round of openECSC 2024. The challenge was really really interesting: the exploitation tecnique involved a buffer overflow through a really short format string vulnerability.</description>
     </item>
   </channel>
 </rss>
