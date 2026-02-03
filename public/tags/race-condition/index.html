@@ -56,7 +56,9 @@
         }
 
     </style>
-</noscript><meta property="og:url" content="http://leo1.cc/tags/race-condition/">
+</noscript><script data-goatcounter="https://leo1.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+<meta property="og:url" content="http://leo1.cc/tags/race-condition/">
   <meta property="og:site_name" content="leo_something">
   <meta property="og:title" content="Race Condition">
   <meta property="og:locale" content="en-us">
@@ -144,7 +146,33 @@
   <div class="entry-content">
     <p>This is an hard pwn challenge I wrote for Compete Against TeamEurope, this CTF was part of the training for ECSC2024. The vulnerability is a double-free triggerable through a race condition. No bruteforce is needed.</p>
   </div>
-  <footer class="entry-footer"><span title='2024-09-16 12:00:00 +0000 UTC'>September 16, 2024</span>&nbsp;·&nbsp;leo_something</footer>
+  <footer class="entry-footer"><span title='2024-09-16 12:00:00'>September 16, 2024</span>&nbsp;·&nbsp;leo_something&nbsp;·&nbsp;<span id="gc-d35b02396db66284b48b2460dd387ff6">0</span>&nbsp;views
+
+<script>
+    (function() {
+        var path = "/posts/writeups/cte24-didup/";
+        var tid = "gc-d35b02396db66284b48b2460dd387ff6";
+        var r = new XMLHttpRequest();
+        r.onreadystatechange = function() {
+            if (r.readyState === 4 && r.status === 200) {
+                try {
+                    var res = JSON.parse(r.responseText);
+                    var el = document.getElementById(tid);
+                    if (el && res.count) {
+                        el.innerText = res.count.replace(/\s/g, '');
+                    } else if (el) {
+                        el.innerText = '0';
+                    }
+                } catch (e) {
+                    console.error("GoatCounter JSON error", e);
+                }
+            }
+        };
+        r.open('GET', 'https://leo1.goatcounter.com/counter/' + encodeURIComponent(path) + '.json', true);
+        r.send();
+    })();
+</script>
+</footer>
   <div class="tags" style="padding: 2px;">
     <div style="display: flex; flex-wrap: wrap; justify-content: flex-end; margin-top: 5px; gap: 5px;">
       
@@ -164,7 +192,7 @@
     </main>
     
 <footer class="footer">
-        <span>&copy; 2025 <a href="http://leo1.cc/">leo_something</a></span> · 
+        <span>&copy; 2026 <a href="http://leo1.cc/">leo_something</a></span> · 
 
     <span>
         Powered by

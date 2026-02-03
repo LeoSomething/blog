@@ -1,0 +1,55 @@
+{{- $scratch := newScratch -}}
+
+{{- /* Data del post */ -}}
+{{- if not .Date.IsZero -}}
+    {{- $scratch.Add "meta" (slice (printf "<span title='%s'>%s</span>" (.Date.Format "2006-01-02 15:04:05") (.Date.Format (default "January 2, 2006" site.Params.DateFormat)))) -}}
+{{- end -}}
+
+{{- /* Tempo di lettura */ -}}
+{{- if (.Param "ShowReadingTime") -}}
+    {{- $scratch.Add "meta" (slice (i18n "read_time" .ReadingTime | default (printf "%d min" .ReadingTime))) -}}
+{{- end -}}
+
+{{- /* Conteggio parole */ -}}
+{{- if (.Param "ShowWordCount") -}}
+    {{- $scratch.Add "meta" (slice (i18n "words" .WordCount | default (printf "%d words" .WordCount))) -}}
+{{- end -}}
+
+{{- /* Autore */ -}}
+{{- if not (.Param "hideAuthor") -}}
+    {{- with (partial "author.html" .) -}}
+        {{- $scratch.Add "meta" (slice .) -}}
+    {{- end -}}
+{{- end -}}
+
+{{- with ($scratch.Get "meta") -}}
+    {{- delimit . "&nbsp;·&nbsp;" | safeHTML -}}
+{{- end -}}
+
+{{- $id := .File.UniqueID | default (.RelPermalink | urlize) -}}
+&nbsp;·&nbsp;<span id="gc-{{ $id }}">0</span>&nbsp;views
+
+<script>
+    (function() {
+        var path = {{ .RelPermalink }};
+        var tid = "gc-{{ $id }}";
+        var r = new XMLHttpRequest();
+        r.onreadystatechange = function() {
+            if (r.readyState === 4 && r.status === 200) {
+                try {
+                    var res = JSON.parse(r.responseText);
+                    var el = document.getElementById(tid);
+                    if (el && res.count) {
+                        el.innerText = res.count.replace(/\s/g, '');
+                    } else if (el) {
+                        el.innerText = '0';
+                    }
+                } catch (e) {
+                    console.error("GoatCounter JSON error", e);
+                }
+            }
+        };
+        r.open('GET', 'https://leo1.goatcounter.com/counter/' + encodeURIComponent(path) + '.json', true);
+        r.send();
+    })();
+</script>

@@ -7,6 +7,7 @@ outputs:
   home:
     - HTML
     - JSON
+    - RSS
 
 pagination:
   pagerSize: 6
@@ -21,7 +22,7 @@ params:
   # ShowReadingTime: true
   # ShowBreadCrumbs: true
   ShowCodeCopyButtons: true
-
+  goatcounter: "leo1.cc"
   fuseOpts:
     isCaseSensitive: false
     shouldSort: true
@@ -46,6 +47,8 @@ params:
       url: "https://discordapp.com/users/leo_something"
     - name: "github"
       url: "https://github.com/LeoSomething"
+    - name: "x"
+      url: "https://x.com/leo_s0mething"
 
 menu:
   main:

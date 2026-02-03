@@ -55,7 +55,9 @@
         }
 
     </style>
-</noscript><meta property="og:url" content="http://leo1.cc/posts/writeups/codegatejunior24-baby_heap/">
+</noscript><script data-goatcounter="https://leo1.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+<meta property="og:url" content="http://leo1.cc/posts/writeups/codegatejunior24-baby_heap/">
   <meta property="og:site_name" content="leo_something">
   <meta property="og:title" content="CodegateJunior24 - Baby Heap">
   <meta property="og:description" content="Heap challenge from the Codegate quals for juniors of 2024. The vulnerability was an heap overflow that enabled an attacker to gain overlapping chunks, therefore arb read and write.">
@@ -195,7 +197,33 @@
     <h1 class="post-title entry-hint-parent">
       CodegateJunior24 - Baby Heap
     </h1>
-    <div class="post-meta"><span title='2024-06-03 12:02:00 +0000 UTC'>June 3, 2024</span>&nbsp;·&nbsp;leo_something
+    <div class="post-meta"><span title='2024-06-03 12:02:00'>June 3, 2024</span>&nbsp;·&nbsp;leo_something&nbsp;·&nbsp;<span id="gc-7db8ad59caeae55113be24f118229a18">0</span>&nbsp;views
+
+<script>
+    (function() {
+        var path = "/posts/writeups/codegatejunior24-baby_heap/";
+        var tid = "gc-7db8ad59caeae55113be24f118229a18";
+        var r = new XMLHttpRequest();
+        r.onreadystatechange = function() {
+            if (r.readyState === 4 && r.status === 200) {
+                try {
+                    var res = JSON.parse(r.responseText);
+                    var el = document.getElementById(tid);
+                    if (el && res.count) {
+                        el.innerText = res.count.replace(/\s/g, '');
+                    } else if (el) {
+                        el.innerText = '0';
+                    }
+                } catch (e) {
+                    console.error("GoatCounter JSON error", e);
+                }
+            }
+        };
+        r.open('GET', 'https://leo1.goatcounter.com/counter/' + encodeURIComponent(path) + '.json', true);
+        r.send();
+    })();
+</script>
+
 
 </div>
   </header>
@@ -498,7 +526,7 @@ The choice of using a onegadget is due to the fact that we can only exploit the 
     </main>
     
 <footer class="footer">
-        <span>&copy; 2025 <a href="http://leo1.cc/">leo_something</a></span> · 
+        <span>&copy; 2026 <a href="http://leo1.cc/">leo_something</a></span> · 
 
     <span>
         Powered by

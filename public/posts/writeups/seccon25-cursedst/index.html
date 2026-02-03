@@ -55,7 +55,9 @@
         }
 
     </style>
-</noscript><meta property="og:url" content="http://leo1.cc/posts/writeups/seccon25-cursedst/">
+</noscript><script data-goatcounter="https://leo1.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+<meta property="og:url" content="http://leo1.cc/posts/writeups/seccon25-cursedst/">
   <meta property="og:site_name" content="leo_something">
   <meta property="og:title" content="Seccon Quals 2025 - CursedST">
   <meta property="og:description" content="Pop on an empty std::stack?!">
@@ -196,7 +198,33 @@
     <h1 class="post-title entry-hint-parent">
       Seccon Quals 2025 - CursedST
     </h1>
-    <div class="post-meta"><span title='2025-12-17 09:00:00 +0000 UTC'>December 17, 2025</span>&nbsp;·&nbsp;leo_something &amp; Lotus
+    <div class="post-meta"><span title='2025-12-17 09:00:00'>December 17, 2025</span>&nbsp;·&nbsp;leo_something &amp; Lotus&nbsp;·&nbsp;<span id="gc-97dde8798123d164aa77da1883e0d1fc">0</span>&nbsp;views
+
+<script>
+    (function() {
+        var path = "/posts/writeups/seccon25-cursedst/";
+        var tid = "gc-97dde8798123d164aa77da1883e0d1fc";
+        var r = new XMLHttpRequest();
+        r.onreadystatechange = function() {
+            if (r.readyState === 4 && r.status === 200) {
+                try {
+                    var res = JSON.parse(r.responseText);
+                    var el = document.getElementById(tid);
+                    if (el && res.count) {
+                        el.innerText = res.count.replace(/\s/g, '');
+                    } else if (el) {
+                        el.innerText = '0';
+                    }
+                } catch (e) {
+                    console.error("GoatCounter JSON error", e);
+                }
+            }
+        };
+        r.open('GET', 'https://leo1.goatcounter.com/counter/' + encodeURIComponent(path) + '.json', true);
+        r.send();
+    })();
+</script>
+
 
 </div>
   </header>
@@ -448,7 +476,7 @@ Now we override the GOT entry of <code>operator delete[]</code> to make it point
     </main>
     
 <footer class="footer">
-        <span>&copy; 2025 <a href="http://leo1.cc/">leo_something</a></span> · 
+        <span>&copy; 2026 <a href="http://leo1.cc/">leo_something</a></span> · 
 
     <span>
         Powered by
