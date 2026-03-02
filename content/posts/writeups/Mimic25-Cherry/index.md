@@ -4,7 +4,7 @@ draft: false
 title: 'Mimic 2025 - Cherry'
 summary: "Exploiting jerryscript in China"
 categories: ["Writeups"]
-tags: ["browser pwn"]
+tags: ["browser"]
 author: "leo_something & BitFriends"
 ShowToc: true
 ---

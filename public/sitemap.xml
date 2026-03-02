@@ -2,22 +2,34 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
+    <loc>http://leo1.cc/categories/</loc>
+    <lastmod>2026-03-01T19:10:00+00:00</lastmod>
+  </url><url>
+    <loc>http://leo1.cc/tags/custom-allocator/</loc>
+    <lastmod>2026-03-01T19:10:00+00:00</lastmod>
+  </url><url>
+    <loc>http://leo1.cc/tags/heap/</loc>
+    <lastmod>2026-03-01T19:10:00+00:00</lastmod>
+  </url><url>
+    <loc>http://leo1.cc/posts/writeups/lakequals25-snalloc/</loc>
+    <lastmod>2026-03-01T19:10:00+00:00</lastmod>
+  </url><url>
+    <loc>http://leo1.cc/</loc>
+    <lastmod>2026-03-01T19:10:00+00:00</lastmod>
+  </url><url>
+    <loc>http://leo1.cc/posts/</loc>
+    <lastmod>2026-03-01T19:10:00+00:00</lastmod>
+  </url><url>
+    <loc>http://leo1.cc/tags/</loc>
+    <lastmod>2026-03-01T19:10:00+00:00</lastmod>
+  </url><url>
+    <loc>http://leo1.cc/categories/writeups/</loc>
+    <lastmod>2026-03-01T19:10:00+00:00</lastmod>
+  </url><url>
     <loc>http://leo1.cc/tags/bof/</loc>
     <lastmod>2025-12-17T09:00:00+00:00</lastmod>
   </url><url>
     <loc>http://leo1.cc/tags/c&#43;&#43;/</loc>
-    <lastmod>2025-12-17T09:00:00+00:00</lastmod>
-  </url><url>
-    <loc>http://leo1.cc/categories/</loc>
-    <lastmod>2025-12-17T09:00:00+00:00</lastmod>
-  </url><url>
-    <loc>http://leo1.cc/tags/heap/</loc>
-    <lastmod>2025-12-17T09:00:00+00:00</lastmod>
-  </url><url>
-    <loc>http://leo1.cc/</loc>
-    <lastmod>2025-12-17T09:00:00+00:00</lastmod>
-  </url><url>
-    <loc>http://leo1.cc/posts/</loc>
     <lastmod>2025-12-17T09:00:00+00:00</lastmod>
   </url><url>
     <loc>http://leo1.cc/posts/writeups/seccon25-cursedst/</loc>
@@ -26,13 +38,7 @@
     <loc>http://leo1.cc/posts/writeups/seccon25-unserialize/</loc>
     <lastmod>2025-12-17T09:00:00+00:00</lastmod>
   </url><url>
-    <loc>http://leo1.cc/tags/</loc>
-    <lastmod>2025-12-17T09:00:00+00:00</lastmod>
-  </url><url>
-    <loc>http://leo1.cc/categories/writeups/</loc>
-    <lastmod>2025-12-17T09:00:00+00:00</lastmod>
-  </url><url>
-    <loc>http://leo1.cc/tags/browser-pwn/</loc>
+    <loc>http://leo1.cc/tags/browser/</loc>
     <lastmod>2025-12-12T18:55:00+00:00</lastmod>
   </url><url>
     <loc>http://leo1.cc/posts/writeups/mimic25-cherry/</loc>
@@ -73,9 +79,6 @@
   </url><url>
     <loc>http://leo1.cc/tags/race-condition/</loc>
     <lastmod>2024-09-16T12:00:00+00:00</lastmod>
-  </url><url>
-    <loc>http://leo1.cc/tags/custom-allocator/</loc>
-    <lastmod>2024-07-08T12:00:00+00:00</lastmod>
   </url><url>
     <loc>http://leo1.cc/posts/writeups/uiuctf24-pwnymalloc/</loc>
     <lastmod>2024-07-08T12:00:00+00:00</lastmod>

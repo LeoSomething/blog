@@ -6,8 +6,22 @@
     <description>Recent content in Tags on leo_something</description>
     <generator>Hugo -- 0.140.2</generator>
     <language>en-us</language>
-    <lastBuildDate>Wed, 17 Dec 2025 09:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Sun, 01 Mar 2026 19:10:00 +0000</lastBuildDate>
     <atom:link href="http://leo1.cc/tags/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Custom Allocator</title>
+      <link>http://leo1.cc/tags/custom-allocator/</link>
+      <pubDate>Sun, 01 Mar 2026 19:10:00 +0000</pubDate>
+      <guid>http://leo1.cc/tags/custom-allocator/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Heap</title>
+      <link>http://leo1.cc/tags/heap/</link>
+      <pubDate>Sun, 01 Mar 2026 19:10:00 +0000</pubDate>
+      <guid>http://leo1.cc/tags/heap/</guid>
+      <description></description>
+    </item>
     <item>
       <title>Bof</title>
       <link>http://leo1.cc/tags/bof/</link>
@@ -23,17 +37,10 @@
       <description></description>
     </item>
     <item>
-      <title>Heap</title>
-      <link>http://leo1.cc/tags/heap/</link>
-      <pubDate>Wed, 17 Dec 2025 09:00:00 +0000</pubDate>
-      <guid>http://leo1.cc/tags/heap/</guid>
-      <description></description>
-    </item>
-    <item>
-      <title>Browser Pwn</title>
-      <link>http://leo1.cc/tags/browser-pwn/</link>
+      <title>Browser</title>
+      <link>http://leo1.cc/tags/browser/</link>
       <pubDate>Fri, 12 Dec 2025 18:55:00 +0000</pubDate>
-      <guid>http://leo1.cc/tags/browser-pwn/</guid>
+      <guid>http://leo1.cc/tags/browser/</guid>
       <description></description>
     </item>
     <item>
@@ -62,13 +69,6 @@
       <link>http://leo1.cc/tags/race-condition/</link>
       <pubDate>Mon, 16 Sep 2024 12:00:00 +0000</pubDate>
       <guid>http://leo1.cc/tags/race-condition/</guid>
-      <description></description>
-    </item>
-    <item>
-      <title>Custom Allocator</title>
-      <link>http://leo1.cc/tags/custom-allocator/</link>
-      <pubDate>Mon, 08 Jul 2024 12:00:00 +0000</pubDate>
-      <guid>http://leo1.cc/tags/custom-allocator/</guid>
       <description></description>
     </item>
     <item>

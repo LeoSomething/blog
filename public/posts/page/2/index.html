@@ -155,6 +155,58 @@
 
 <article class="post-entry"> 
   <header class="entry-header">
+    <h2 class="entry-hint-parent">Srdnlen 2025 - Snowstorm
+    </h2>
+  </header>
+  <div class="entry-content">
+    <p>Interesting pwn challenge regarding the exploitation of a simple stack BOF.</p>
+  </div>
+  <footer class="entry-footer"><span title='2025-01-21 18:50:00'>January 21, 2025</span>&nbsp;·&nbsp;leo_something &amp; Lotus&nbsp;·&nbsp;<span id="gc-24130dbb701c5f2cf42c190a4430fd4d">0</span>&nbsp;views
+
+<script>
+    (function() {
+        var path = "/posts/writeups/srdnlen25-snowstorm/";
+        var tid = "gc-24130dbb701c5f2cf42c190a4430fd4d";
+        var r = new XMLHttpRequest();
+        r.onreadystatechange = function() {
+            if (r.readyState === 4 && r.status === 200) {
+                try {
+                    var res = JSON.parse(r.responseText);
+                    var el = document.getElementById(tid);
+                    if (el && res.count) {
+                        el.innerText = res.count.replace(/\s/g, '');
+                    } else if (el) {
+                        el.innerText = '0';
+                    }
+                } catch (e) {
+                    console.error("GoatCounter JSON error", e);
+                }
+            }
+        };
+        r.open('GET', 'https://leo1.goatcounter.com/counter/' + encodeURIComponent(path) + '.json', true);
+        r.send();
+    })();
+</script>
+</footer>
+  <div class="tags" style="padding: 2px;">
+    <div style="display: flex; flex-wrap: wrap; justify-content: flex-end; margin-top: 5px; gap: 5px;">
+      
+      <a href="/tags/bof" class="custom-tag">
+        bof
+      </a>
+      
+      <a href="/tags/stack-pivoting" class="custom-tag">
+        stack pivoting
+      </a>
+      
+    </div>
+  </div>
+
+  <a class="entry-link" aria-label="post link to Srdnlen 2025 - Snowstorm" href="http://leo1.cc/posts/writeups/srdnlen25-snowstorm/"></a>
+</article>
+
+<article class="post-entry"> 
+  <header class="entry-header">
     <h2 class="entry-hint-parent">Srdnlen 2025 - Kinderheim 511
     </h2>
   </header>
@@ -399,54 +451,6 @@
   </div>
 
   <a class="entry-link" aria-label="post link to UIUCTF24 - Pwnymalloc" href="http://leo1.cc/posts/writeups/uiuctf24-pwnymalloc/"></a>
-</article>
-
-<article class="post-entry"> 
-  <header class="entry-header">
-    <h2 class="entry-hint-parent">Ret2dlresolve in 64bit binaries
-    </h2>
-  </header>
-  <div class="entry-content">
-    <p>Ret2dlresolve is a really powerful tecnique to use in pwn challenges (even tho it’s not frequently seen). It’s useful when we don’t have libc leaks or don’t know the libc version.</p>
-  </div>
-  <footer class="entry-footer"><span title='2024-06-12 12:00:00'>June 12, 2024</span>&nbsp;·&nbsp;leo_something&nbsp;·&nbsp;<span id="gc-fecf1c5f38195827d9efa3a1439c6b31">0</span>&nbsp;views
-
-<script>
-    (function() {
-        var path = "/posts/docs/ret2dlresolve/";
-        var tid = "gc-fecf1c5f38195827d9efa3a1439c6b31";
-        var r = new XMLHttpRequest();
-        r.onreadystatechange = function() {
-            if (r.readyState === 4 && r.status === 200) {
-                try {
-                    var res = JSON.parse(r.responseText);
-                    var el = document.getElementById(tid);
-                    if (el && res.count) {
-                        el.innerText = res.count.replace(/\s/g, '');
-                    } else if (el) {
-                        el.innerText = '0';
-                    }
-                } catch (e) {
-                    console.error("GoatCounter JSON error", e);
-                }
-            }
-        };
-        r.open('GET', 'https://leo1.goatcounter.com/counter/' + encodeURIComponent(path) + '.json', true);
-        r.send();
-    })();
-</script>
-</footer>
-  <div class="tags" style="padding: 2px;">
-    <div style="display: flex; flex-wrap: wrap; justify-content: flex-end; margin-top: 5px; gap: 5px;">
-      
-      <a href="/tags/ret2dlresolve" class="custom-tag">
-        ret2dlresolve
-      </a>
-      
-    </div>
-  </div>
-
-  <a class="entry-link" aria-label="post link to Ret2dlresolve in 64bit binaries" href="http://leo1.cc/posts/docs/ret2dlresolve/"></a>
 </article>
 <footer class="page-footer">
   <nav class="pagination">
