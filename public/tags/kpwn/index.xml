@@ -6,8 +6,15 @@
     <description>Recent content in Kpwn on leo_something</description>
     <generator>Hugo -- 0.140.2</generator>
     <language>en-us</language>
-    <lastBuildDate>Tue, 28 Jan 2025 14:22:00 +0000</lastBuildDate>
+    <lastBuildDate>Fri, 03 Jul 2026 16:00:00 +0000</lastBuildDate>
     <atom:link href="http://leo1.cc/tags/kpwn/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>socket(0,2,0) - Reviving modprobe_path again</title>
+      <link>http://leo1.cc/posts/docs/socket020---reviving-modprobe_path-again/</link>
+      <pubDate>Fri, 03 Jul 2026 16:00:00 +0000</pubDate>
+      <guid>http://leo1.cc/posts/docs/socket020---reviving-modprobe_path-again/</guid>
+      <description>Finding a new modprobe trigger without AI to solve &amp;ldquo;greynote&amp;rdquo; at GreyCTF Finals</description>
+    </item>
     <item>
       <title>TeamItalyCTF 2022 - FamilyRecipes</title>
       <link>http://leo1.cc/posts/writeups/teamitalyctf22-familyrecipes/</link>

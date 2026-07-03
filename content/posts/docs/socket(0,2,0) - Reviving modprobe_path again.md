@@ -1,8 +1,8 @@
 ---
 date: '2026-07-03T16:00:00Z'
 draft: false
-title: 'socket(0,2,0) - Reviving modprobe_path again'
-summary: "Finding a new modprobe trigger without AI to solve "greynote" at GreyCTF Finals"
+title: "socket(0,2,0) - Reviving modprobe_path again"
+summary: "Finding a new modprobe trigger without AI to solve \"greynote\" at GreyCTF Finals"
 
 categories: ["Docs", "Writeups"]
 tags: ["kpwn"]

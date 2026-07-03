@@ -3,7 +3,28 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
     <loc>http://leo1.cc/categories/</loc>
-    <lastmod>2026-03-01T19:10:00+00:00</lastmod>
+    <lastmod>2026-07-03T16:00:00+00:00</lastmod>
+  </url><url>
+    <loc>http://leo1.cc/categories/docs/</loc>
+    <lastmod>2026-07-03T16:00:00+00:00</lastmod>
+  </url><url>
+    <loc>http://leo1.cc/tags/kpwn/</loc>
+    <lastmod>2026-07-03T16:00:00+00:00</lastmod>
+  </url><url>
+    <loc>http://leo1.cc/</loc>
+    <lastmod>2026-07-03T16:00:00+00:00</lastmod>
+  </url><url>
+    <loc>http://leo1.cc/posts/</loc>
+    <lastmod>2026-07-03T16:00:00+00:00</lastmod>
+  </url><url>
+    <loc>http://leo1.cc/posts/docs/socket020---reviving-modprobe_path-again/</loc>
+    <lastmod>2026-07-03T16:00:00+00:00</lastmod>
+  </url><url>
+    <loc>http://leo1.cc/tags/</loc>
+    <lastmod>2026-07-03T16:00:00+00:00</lastmod>
+  </url><url>
+    <loc>http://leo1.cc/categories/writeups/</loc>
+    <lastmod>2026-07-03T16:00:00+00:00</lastmod>
   </url><url>
     <loc>http://leo1.cc/tags/custom-allocator/</loc>
     <lastmod>2026-03-01T19:10:00+00:00</lastmod>
@@ -12,18 +33,6 @@
     <lastmod>2026-03-01T19:10:00+00:00</lastmod>
   </url><url>
     <loc>http://leo1.cc/posts/writeups/lakequals25-snalloc/</loc>
-    <lastmod>2026-03-01T19:10:00+00:00</lastmod>
-  </url><url>
-    <loc>http://leo1.cc/</loc>
-    <lastmod>2026-03-01T19:10:00+00:00</lastmod>
-  </url><url>
-    <loc>http://leo1.cc/posts/</loc>
-    <lastmod>2026-03-01T19:10:00+00:00</lastmod>
-  </url><url>
-    <loc>http://leo1.cc/tags/</loc>
-    <lastmod>2026-03-01T19:10:00+00:00</lastmod>
-  </url><url>
-    <loc>http://leo1.cc/categories/writeups/</loc>
     <lastmod>2026-03-01T19:10:00+00:00</lastmod>
   </url><url>
     <loc>http://leo1.cc/tags/bof/</loc>
@@ -47,9 +56,6 @@
     <loc>http://leo1.cc/posts/writeups/htb25-vault/</loc>
     <lastmod>2025-04-02T09:00:00+00:00</lastmod>
   </url><url>
-    <loc>http://leo1.cc/tags/kpwn/</loc>
-    <lastmod>2025-01-28T14:22:00+00:00</lastmod>
-  </url><url>
     <loc>http://leo1.cc/posts/writeups/teamitalyctf22-familyrecipes/</loc>
     <lastmod>2025-01-28T14:22:00+00:00</lastmod>
   </url><url>
@@ -64,9 +70,6 @@
   </url><url>
     <loc>http://leo1.cc/posts/writeups/srdnlen25-kinderheim_511/</loc>
     <lastmod>2025-01-21T18:49:00+00:00</lastmod>
-  </url><url>
-    <loc>http://leo1.cc/categories/docs/</loc>
-    <lastmod>2025-01-14T19:30:00+00:00</lastmod>
   </url><url>
     <loc>http://leo1.cc/posts/docs/modprobe/</loc>
     <lastmod>2025-01-14T19:30:00+00:00</lastmod>

