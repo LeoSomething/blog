@@ -1,26 +1,31 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
-  <channel>
-    <title>Categories on leo_something</title>
-    <link>http://leo1.cc/categories/</link>
-    <description>Recent content in Categories on leo_something</description>
-    <generator>Hugo -- 0.140.2</generator>
-    <language>en-us</language>
-    <lastBuildDate>Fri, 03 Jul 2026 16:00:00 +0000</lastBuildDate>
-    <atom:link href="http://leo1.cc/categories/index.xml" rel="self" type="application/rss+xml" />
-    <item>
-      <title>Docs</title>
-      <link>http://leo1.cc/categories/docs/</link>
-      <pubDate>Fri, 03 Jul 2026 16:00:00 +0000</pubDate>
-      <guid>http://leo1.cc/categories/docs/</guid>
-      <description></description>
-    </item>
-    <item>
-      <title>Writeups</title>
-      <link>http://leo1.cc/categories/writeups/</link>
-      <pubDate>Fri, 03 Jul 2026 16:00:00 +0000</pubDate>
-      <guid>http://leo1.cc/categories/writeups/</guid>
-      <description></description>
-    </item>
-  </channel>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+	<channel>
+		<title>Categories on leo_something</title>
+		<link>http://localhost:1313/categories/</link>
+		<description>Recent content in Categories on leo_something</description>
+		<generator>Hugo</generator>
+		<language>en-us</language>
+		
+		
+		
+		
+			<lastBuildDate>Fri, 03 Jul 2026 16:00:00 +0000</lastBuildDate>
+		
+			<atom:link href="http://localhost:1313/categories/index.xml" rel="self" type="application/rss+xml" />
+			<item>
+				<title>Docs</title>
+				<link>http://localhost:1313/categories/docs/</link>
+				<pubDate>Fri, 03 Jul 2026 16:00:00 +0000</pubDate>
+				<guid>http://localhost:1313/categories/docs/</guid>
+				<description></description>
+			</item>
+			<item>
+				<title>Writeups</title>
+				<link>http://localhost:1313/categories/writeups/</link>
+				<pubDate>Fri, 03 Jul 2026 16:00:00 +0000</pubDate>
+				<guid>http://localhost:1313/categories/writeups/</guid>
+				<description></description>
+			</item>
+	</channel>
 </rss>

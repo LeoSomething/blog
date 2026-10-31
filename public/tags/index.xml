@@ -1,96 +1,101 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
-  <channel>
-    <title>Tags on leo_something</title>
-    <link>http://leo1.cc/tags/</link>
-    <description>Recent content in Tags on leo_something</description>
-    <generator>Hugo -- 0.140.2</generator>
-    <language>en-us</language>
-    <lastBuildDate>Fri, 03 Jul 2026 16:00:00 +0000</lastBuildDate>
-    <atom:link href="http://leo1.cc/tags/index.xml" rel="self" type="application/rss+xml" />
-    <item>
-      <title>Kpwn</title>
-      <link>http://leo1.cc/tags/kpwn/</link>
-      <pubDate>Fri, 03 Jul 2026 16:00:00 +0000</pubDate>
-      <guid>http://leo1.cc/tags/kpwn/</guid>
-      <description></description>
-    </item>
-    <item>
-      <title>Custom Allocator</title>
-      <link>http://leo1.cc/tags/custom-allocator/</link>
-      <pubDate>Sun, 01 Mar 2026 19:10:00 +0000</pubDate>
-      <guid>http://leo1.cc/tags/custom-allocator/</guid>
-      <description></description>
-    </item>
-    <item>
-      <title>Heap</title>
-      <link>http://leo1.cc/tags/heap/</link>
-      <pubDate>Sun, 01 Mar 2026 19:10:00 +0000</pubDate>
-      <guid>http://leo1.cc/tags/heap/</guid>
-      <description></description>
-    </item>
-    <item>
-      <title>Bof</title>
-      <link>http://leo1.cc/tags/bof/</link>
-      <pubDate>Wed, 17 Dec 2025 09:00:00 +0000</pubDate>
-      <guid>http://leo1.cc/tags/bof/</guid>
-      <description></description>
-    </item>
-    <item>
-      <title>C&#43;&#43;</title>
-      <link>http://leo1.cc/tags/c&#43;&#43;/</link>
-      <pubDate>Wed, 17 Dec 2025 09:00:00 +0000</pubDate>
-      <guid>http://leo1.cc/tags/c&#43;&#43;/</guid>
-      <description></description>
-    </item>
-    <item>
-      <title>Browser</title>
-      <link>http://leo1.cc/tags/browser/</link>
-      <pubDate>Fri, 12 Dec 2025 18:55:00 +0000</pubDate>
-      <guid>http://leo1.cc/tags/browser/</guid>
-      <description></description>
-    </item>
-    <item>
-      <title>Uaf</title>
-      <link>http://leo1.cc/tags/uaf/</link>
-      <pubDate>Tue, 28 Jan 2025 14:22:00 +0000</pubDate>
-      <guid>http://leo1.cc/tags/uaf/</guid>
-      <description></description>
-    </item>
-    <item>
-      <title>Stack Pivoting</title>
-      <link>http://leo1.cc/tags/stack-pivoting/</link>
-      <pubDate>Tue, 21 Jan 2025 18:50:00 +0000</pubDate>
-      <guid>http://leo1.cc/tags/stack-pivoting/</guid>
-      <description></description>
-    </item>
-    <item>
-      <title>Race Condition</title>
-      <link>http://leo1.cc/tags/race-condition/</link>
-      <pubDate>Mon, 16 Sep 2024 12:00:00 +0000</pubDate>
-      <guid>http://leo1.cc/tags/race-condition/</guid>
-      <description></description>
-    </item>
-    <item>
-      <title>Ret2dlresolve</title>
-      <link>http://leo1.cc/tags/ret2dlresolve/</link>
-      <pubDate>Wed, 12 Jun 2024 12:00:00 +0000</pubDate>
-      <guid>http://leo1.cc/tags/ret2dlresolve/</guid>
-      <description></description>
-    </item>
-    <item>
-      <title>Format String</title>
-      <link>http://leo1.cc/tags/format-string/</link>
-      <pubDate>Sat, 25 May 2024 12:00:00 +0000</pubDate>
-      <guid>http://leo1.cc/tags/format-string/</guid>
-      <description></description>
-    </item>
-    <item>
-      <title>Attack-Defense</title>
-      <link>http://leo1.cc/tags/attack-defense/</link>
-      <pubDate>Fri, 19 Apr 2024 12:01:00 +0000</pubDate>
-      <guid>http://leo1.cc/tags/attack-defense/</guid>
-      <description></description>
-    </item>
-  </channel>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+	<channel>
+		<title>Tags on leo_something</title>
+		<link>http://localhost:1313/tags/</link>
+		<description>Recent content in Tags on leo_something</description>
+		<generator>Hugo</generator>
+		<language>en-us</language>
+		
+		
+		
+		
+			<lastBuildDate>Fri, 03 Jul 2026 16:00:00 +0000</lastBuildDate>
+		
+			<atom:link href="http://localhost:1313/tags/index.xml" rel="self" type="application/rss+xml" />
+			<item>
+				<title>Kpwn</title>
+				<link>http://localhost:1313/tags/kpwn/</link>
+				<pubDate>Fri, 03 Jul 2026 16:00:00 +0000</pubDate>
+				<guid>http://localhost:1313/tags/kpwn/</guid>
+				<description></description>
+			</item>
+			<item>
+				<title>Custom Allocator</title>
+				<link>http://localhost:1313/tags/custom-allocator/</link>
+				<pubDate>Sun, 01 Mar 2026 19:10:00 +0000</pubDate>
+				<guid>http://localhost:1313/tags/custom-allocator/</guid>
+				<description></description>
+			</item>
+			<item>
+				<title>Heap</title>
+				<link>http://localhost:1313/tags/heap/</link>
+				<pubDate>Sun, 01 Mar 2026 19:10:00 +0000</pubDate>
+				<guid>http://localhost:1313/tags/heap/</guid>
+				<description></description>
+			</item>
+			<item>
+				<title>Bof</title>
+				<link>http://localhost:1313/tags/bof/</link>
+				<pubDate>Wed, 17 Dec 2025 09:00:00 +0000</pubDate>
+				<guid>http://localhost:1313/tags/bof/</guid>
+				<description></description>
+			</item>
+			<item>
+				<title>C&#43;&#43;</title>
+				<link>http://localhost:1313/tags/c&#43;&#43;/</link>
+				<pubDate>Wed, 17 Dec 2025 09:00:00 +0000</pubDate>
+				<guid>http://localhost:1313/tags/c&#43;&#43;/</guid>
+				<description></description>
+			</item>
+			<item>
+				<title>Browser</title>
+				<link>http://localhost:1313/tags/browser/</link>
+				<pubDate>Fri, 12 Dec 2025 18:55:00 +0000</pubDate>
+				<guid>http://localhost:1313/tags/browser/</guid>
+				<description></description>
+			</item>
+			<item>
+				<title>Uaf</title>
+				<link>http://localhost:1313/tags/uaf/</link>
+				<pubDate>Tue, 28 Jan 2025 14:22:00 +0000</pubDate>
+				<guid>http://localhost:1313/tags/uaf/</guid>
+				<description></description>
+			</item>
+			<item>
+				<title>Stack Pivoting</title>
+				<link>http://localhost:1313/tags/stack-pivoting/</link>
+				<pubDate>Tue, 21 Jan 2025 18:50:00 +0000</pubDate>
+				<guid>http://localhost:1313/tags/stack-pivoting/</guid>
+				<description></description>
+			</item>
+			<item>
+				<title>Race Condition</title>
+				<link>http://localhost:1313/tags/race-condition/</link>
+				<pubDate>Mon, 16 Sep 2024 12:00:00 +0000</pubDate>
+				<guid>http://localhost:1313/tags/race-condition/</guid>
+				<description></description>
+			</item>
+			<item>
+				<title>Ret2dlresolve</title>
+				<link>http://localhost:1313/tags/ret2dlresolve/</link>
+				<pubDate>Wed, 12 Jun 2024 12:00:00 +0000</pubDate>
+				<guid>http://localhost:1313/tags/ret2dlresolve/</guid>
+				<description></description>
+			</item>
+			<item>
+				<title>Format String</title>
+				<link>http://localhost:1313/tags/format-string/</link>
+				<pubDate>Sat, 25 May 2024 12:00:00 +0000</pubDate>
+				<guid>http://localhost:1313/tags/format-string/</guid>
+				<description></description>
+			</item>
+			<item>
+				<title>Attack-Defense</title>
+				<link>http://localhost:1313/tags/attack-defense/</link>
+				<pubDate>Fri, 19 Apr 2024 12:01:00 +0000</pubDate>
+				<guid>http://localhost:1313/tags/attack-defense/</guid>
+				<description></description>
+			</item>
+	</channel>
 </rss>

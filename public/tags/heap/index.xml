@@ -1,54 +1,59 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
-  <channel>
-    <title>Heap on leo_something</title>
-    <link>http://leo1.cc/tags/heap/</link>
-    <description>Recent content in Heap on leo_something</description>
-    <generator>Hugo -- 0.140.2</generator>
-    <language>en-us</language>
-    <lastBuildDate>Sun, 01 Mar 2026 19:10:00 +0000</lastBuildDate>
-    <atom:link href="http://leo1.cc/tags/heap/index.xml" rel="self" type="application/rss+xml" />
-    <item>
-      <title>Lake Quals 2025 - Still Not Malloc</title>
-      <link>http://leo1.cc/posts/writeups/lakequals25-snalloc/</link>
-      <pubDate>Sun, 01 Mar 2026 19:10:00 +0000</pubDate>
-      <guid>http://leo1.cc/posts/writeups/lakequals25-snalloc/</guid>
-      <description>Some satisfying heap feng shui at 5 am in Nanjing</description>
-    </item>
-    <item>
-      <title>Seccon Quals 2025 - CursedST</title>
-      <link>http://leo1.cc/posts/writeups/seccon25-cursedst/</link>
-      <pubDate>Wed, 17 Dec 2025 09:00:00 +0000</pubDate>
-      <guid>http://leo1.cc/posts/writeups/seccon25-cursedst/</guid>
-      <description>Pop on an empty std::stack?!</description>
-    </item>
-    <item>
-      <title>Srdnlen 2025 - Kinderheim 511</title>
-      <link>http://leo1.cc/posts/writeups/srdnlen25-kinderheim_511/</link>
-      <pubDate>Tue, 21 Jan 2025 18:49:00 +0000</pubDate>
-      <guid>http://leo1.cc/posts/writeups/srdnlen25-kinderheim_511/</guid>
-      <description>Heap challenge with the goal of achieving arbitrary write to read the flag from the heap.</description>
-    </item>
-    <item>
-      <title>CTE24 - DiDUP</title>
-      <link>http://leo1.cc/posts/writeups/cte24-didup/</link>
-      <pubDate>Mon, 16 Sep 2024 12:00:00 +0000</pubDate>
-      <guid>http://leo1.cc/posts/writeups/cte24-didup/</guid>
-      <description>This is an hard pwn challenge I wrote for Compete Against TeamEurope, this CTF was part of the training for ECSC2024. The vulnerability is a double-free triggerable through a race condition. No bruteforce is needed.</description>
-    </item>
-    <item>
-      <title>UIUCTF24 - Pwnymalloc</title>
-      <link>http://leo1.cc/posts/writeups/uiuctf24-pwnymalloc/</link>
-      <pubDate>Mon, 08 Jul 2024 12:00:00 +0000</pubDate>
-      <guid>http://leo1.cc/posts/writeups/uiuctf24-pwnymalloc/</guid>
-      <description>Pwnymalloc is a nice custom allocator challenge from UIUCTF 2024. The vulnerability was about an incorrect handling of the prev_size during consolitation.</description>
-    </item>
-    <item>
-      <title>CodegateJunior24 - Baby Heap</title>
-      <link>http://leo1.cc/posts/writeups/codegatejunior24-baby_heap/</link>
-      <pubDate>Mon, 03 Jun 2024 12:02:00 +0000</pubDate>
-      <guid>http://leo1.cc/posts/writeups/codegatejunior24-baby_heap/</guid>
-      <description>Heap challenge from the Codegate quals for juniors of 2024. The vulnerability was an heap overflow that enabled an attacker to gain overlapping chunks, therefore arb read and write.</description>
-    </item>
-  </channel>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+	<channel>
+		<title>Heap on leo_something</title>
+		<link>http://localhost:1313/tags/heap/</link>
+		<description>Recent content in Heap on leo_something</description>
+		<generator>Hugo</generator>
+		<language>en-us</language>
+		
+		
+		
+		
+			<lastBuildDate>Sun, 01 Mar 2026 19:10:00 +0000</lastBuildDate>
+		
+			<atom:link href="http://localhost:1313/tags/heap/index.xml" rel="self" type="application/rss+xml" />
+			<item>
+				<title>Lake Quals 2025 - Still Not Malloc</title>
+				<link>http://localhost:1313/posts/writeups/lakequals25-snalloc/</link>
+				<pubDate>Sun, 01 Mar 2026 19:10:00 +0000</pubDate>
+				<guid>http://localhost:1313/posts/writeups/lakequals25-snalloc/</guid>
+				<description>Some satisfying heap feng shui at 5 am in Nanjing</description>
+			</item>
+			<item>
+				<title>Seccon Quals 2025 - CursedST</title>
+				<link>http://localhost:1313/posts/writeups/seccon25-cursedst/</link>
+				<pubDate>Wed, 17 Dec 2025 09:00:00 +0000</pubDate>
+				<guid>http://localhost:1313/posts/writeups/seccon25-cursedst/</guid>
+				<description>Pop on an empty std::stack?!</description>
+			</item>
+			<item>
+				<title>Srdnlen 2025 - Kinderheim 511</title>
+				<link>http://localhost:1313/posts/writeups/srdnlen25-kinderheim_511/</link>
+				<pubDate>Tue, 21 Jan 2025 18:49:00 +0000</pubDate>
+				<guid>http://localhost:1313/posts/writeups/srdnlen25-kinderheim_511/</guid>
+				<description>Heap challenge with the goal of achieving arbitrary write to read the flag from the heap.</description>
+			</item>
+			<item>
+				<title>CTE24 - DiDUP</title>
+				<link>http://localhost:1313/posts/writeups/cte24-didup/</link>
+				<pubDate>Mon, 16 Sep 2024 12:00:00 +0000</pubDate>
+				<guid>http://localhost:1313/posts/writeups/cte24-didup/</guid>
+				<description>This is an hard pwn challenge I wrote for Compete Against TeamEurope, this CTF was part of the training for ECSC2024. The vulnerability is a double-free triggerable through a race condition. No bruteforce is needed.</description>
+			</item>
+			<item>
+				<title>UIUCTF24 - Pwnymalloc</title>
+				<link>http://localhost:1313/posts/writeups/uiuctf24-pwnymalloc/</link>
+				<pubDate>Mon, 08 Jul 2024 12:00:00 +0000</pubDate>
+				<guid>http://localhost:1313/posts/writeups/uiuctf24-pwnymalloc/</guid>
+				<description>Pwnymalloc is a nice custom allocator challenge from UIUCTF 2024. The vulnerability was about an incorrect handling of the prev_size during consolitation.</description>
+			</item>
+			<item>
+				<title>CodegateJunior24 - Baby Heap</title>
+				<link>http://localhost:1313/posts/writeups/codegatejunior24-baby_heap/</link>
+				<pubDate>Mon, 03 Jun 2024 12:02:00 +0000</pubDate>
+				<guid>http://localhost:1313/posts/writeups/codegatejunior24-baby_heap/</guid>
+				<description>Heap challenge from the Codegate quals for juniors of 2024. The vulnerability was an heap overflow that enabled an attacker to gain overlapping chunks, therefore arb read and write.</description>
+			</item>
+	</channel>
 </rss>

@@ -1,26 +1,31 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
-  <channel>
-    <title>Custom Allocator on leo_something</title>
-    <link>http://leo1.cc/tags/custom-allocator/</link>
-    <description>Recent content in Custom Allocator on leo_something</description>
-    <generator>Hugo -- 0.140.2</generator>
-    <language>en-us</language>
-    <lastBuildDate>Sun, 01 Mar 2026 19:10:00 +0000</lastBuildDate>
-    <atom:link href="http://leo1.cc/tags/custom-allocator/index.xml" rel="self" type="application/rss+xml" />
-    <item>
-      <title>Lake Quals 2025 - Still Not Malloc</title>
-      <link>http://leo1.cc/posts/writeups/lakequals25-snalloc/</link>
-      <pubDate>Sun, 01 Mar 2026 19:10:00 +0000</pubDate>
-      <guid>http://leo1.cc/posts/writeups/lakequals25-snalloc/</guid>
-      <description>Some satisfying heap feng shui at 5 am in Nanjing</description>
-    </item>
-    <item>
-      <title>UIUCTF24 - Pwnymalloc</title>
-      <link>http://leo1.cc/posts/writeups/uiuctf24-pwnymalloc/</link>
-      <pubDate>Mon, 08 Jul 2024 12:00:00 +0000</pubDate>
-      <guid>http://leo1.cc/posts/writeups/uiuctf24-pwnymalloc/</guid>
-      <description>Pwnymalloc is a nice custom allocator challenge from UIUCTF 2024. The vulnerability was about an incorrect handling of the prev_size during consolitation.</description>
-    </item>
-  </channel>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+	<channel>
+		<title>Custom Allocator on leo_something</title>
+		<link>http://localhost:1313/tags/custom-allocator/</link>
+		<description>Recent content in Custom Allocator on leo_something</description>
+		<generator>Hugo</generator>
+		<language>en-us</language>
+		
+		
+		
+		
+			<lastBuildDate>Sun, 01 Mar 2026 19:10:00 +0000</lastBuildDate>
+		
+			<atom:link href="http://localhost:1313/tags/custom-allocator/index.xml" rel="self" type="application/rss+xml" />
+			<item>
+				<title>Lake Quals 2025 - Still Not Malloc</title>
+				<link>http://localhost:1313/posts/writeups/lakequals25-snalloc/</link>
+				<pubDate>Sun, 01 Mar 2026 19:10:00 +0000</pubDate>
+				<guid>http://localhost:1313/posts/writeups/lakequals25-snalloc/</guid>
+				<description>Some satisfying heap feng shui at 5 am in Nanjing</description>
+			</item>
+			<item>
+				<title>UIUCTF24 - Pwnymalloc</title>
+				<link>http://localhost:1313/posts/writeups/uiuctf24-pwnymalloc/</link>
+				<pubDate>Mon, 08 Jul 2024 12:00:00 +0000</pubDate>
+				<guid>http://localhost:1313/posts/writeups/uiuctf24-pwnymalloc/</guid>
+				<description>Pwnymalloc is a nice custom allocator challenge from UIUCTF 2024. The vulnerability was about an incorrect handling of the prev_size during consolitation.</description>
+			</item>
+	</channel>
 </rss>

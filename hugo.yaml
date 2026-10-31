@@ -3,6 +3,10 @@ languageCode: en-us
 title: leo_something
 theme: ["PaperMod"]
 
+caches:
+  images:
+    dir: :cacheDir/images
+
 outputs:
   home:
     - HTML
