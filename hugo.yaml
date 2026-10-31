@@ -1,5 +1,5 @@
 baseURL: http://leo1.cc/
-languageCode: en-us
+locale: en-us
 title: leo_something
 theme: ["PaperMod"]
 

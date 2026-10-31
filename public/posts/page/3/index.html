@@ -1,25 +1,25 @@
 <!DOCTYPE html>
-<html lang="en" dir="auto">
+<html lang="en" dir="auto" data-theme="auto">
 
-<head><meta charset="utf-8">
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script><meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<meta name="robots" content="index, follow">
+<meta name="robots" content="noindex, nofollow">
 <title>Posts | leo_something</title>
 <meta name="keywords" content="">
 <meta name="description" content="Posts - leo_something">
 <meta name="author" content="">
-<link rel="canonical" href="http://leo1.cc/posts/">
-<link crossorigin="anonymous" href="/assets/css/stylesheet.62bb6a5e71ed8590b51185096e2d3dea8379889277e03fcf9ef8a01b0f6d9dc0.css" integrity="sha256-YrtqXnHthZC1EYUJbi096oN5iJJ34D/PnvigGw9tncA=" rel="preload stylesheet" as="style">
-<link rel="icon" href="http://leo1.cc/favicon.ico">
-<link rel="icon" type="image/png" sizes="16x16" href="http://leo1.cc/favicon-16x16.png">
-<link rel="icon" type="image/png" sizes="32x32" href="http://leo1.cc/favicon-32x32.png">
-<link rel="apple-touch-icon" href="http://leo1.cc/apple-touch-icon.png">
-<link rel="mask-icon" href="http://leo1.cc/safari-pinned-tab.svg">
+<link rel="canonical" href="http://localhost:1313/posts/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.fbac6695f4a8cddd92d37781d10dd91c1cce98cdc1aab7b4eb16ad28eefe81a7.css" integrity="sha256-&#43;6xmlfSozd2S03eB0Q3ZHBzOmM3Bqre06xatKO7&#43;gac=" rel="preload stylesheet" as="style">
+<link rel="icon" href="http://localhost:1313/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="http://localhost:1313/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="http://localhost:1313/favicon-32x32.png">
+<link rel="apple-touch-icon" href="http://localhost:1313/apple-touch-icon.png">
+<link rel="mask-icon" href="http://localhost:1313/safari-pinned-tab.svg">
 <meta name="theme-color" content="#2e2e33">
 <meta name="msapplication-TileColor" content="#2e2e33">
-<link rel="alternate" type="application/rss+xml" href="http://leo1.cc/posts/index.xml">
-<link rel="alternate" hreflang="en" href="http://leo1.cc/posts/">
+<link rel="alternate" type="application/rss+xml" href="http://localhost:1313/posts/index.xml" title="rss">
+<link rel="alternate" hreflang="en" href="http://localhost:1313/posts/">
 <noscript>
     <style>
         #theme-toggle,
@@ -40,73 +40,47 @@
                 --code-block-bg: rgb(46, 46, 51);
                 --code-bg: rgb(55, 56, 62);
                 --border: rgb(51, 51, 51);
+                color-scheme: dark;
             }
 
             .list {
                 background: var(--theme);
             }
 
-            .list:not(.dark)::-webkit-scrollbar-track {
-                background: 0 0;
-            }
-
-            .list:not(.dark)::-webkit-scrollbar-thumb {
-                border-color: var(--theme);
+            .toc {
+                background: var(--entry);
             }
         }
 
     </style>
-</noscript><script data-goatcounter="https://leo1.goatcounter.com/count"
-        async src="//gc.zgo.at/count.js"></script>
-<meta property="og:url" content="http://leo1.cc/posts/">
-  <meta property="og:site_name" content="leo_something">
-  <meta property="og:title" content="Posts">
-  <meta property="og:locale" content="en-us">
-  <meta property="og:type" content="website">
-<meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Posts">
-<meta name="twitter:description" content="">
-
-
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "BreadcrumbList",
-  "itemListElement": [
-    {
-      "@type": "ListItem",
-      "position":  1 ,
-      "name": "Posts",
-      "item": "http://leo1.cc/posts/"
-    }
-  ]
-}
-</script>
-</head>
-
-<body class="list" id="top">
+</noscript>
 <script>
     if (localStorage.getItem("pref-theme") === "dark") {
-        document.body.classList.add('dark');
+        document.querySelector("html").dataset.theme = 'dark';
     } else if (localStorage.getItem("pref-theme") === "light") {
-        document.body.classList.remove('dark')
+       document.querySelector("html").dataset.theme = 'light';
     } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        document.body.classList.add('dark');
+        document.querySelector("html").dataset.theme = 'dark';
+    } else {
+        document.querySelector("html").dataset.theme = 'light';
     }
 
-</script>
+</script><script data-goatcounter="https://leo1.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
 
-<header class="header">
-    <nav class="nav">
+</head>
+<body class="list" id="top">
+    <header class="header">
+    <nav class="header-nav">
         <div class="logo">
             <div class="logo-switches">
-                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
-                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                <button id="theme-toggle" class="theme-toggle" accesskey="t" title="(Alt + T)" aria-label="Toggle theme">
+                    <svg class="moon" xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24"
                         fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                         stroke-linejoin="round">
                         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
                     </svg>
-                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                    <svg class="sun" xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24"
                         fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                         stroke-linejoin="round">
                         <circle cx="12" cy="12" r="5"></circle>
@@ -122,24 +96,24 @@
                 </button>
             </div>
         </div>
-        <ul id="menu">
+        <ul id="menu" class="menu">
             <li>
-                <a href="http://leo1.cc/" title="Home">
+                <a href="http://localhost:1313/" title="Home">
                     <span>Home</span>
                 </a>
             </li>
             <li>
-                <a href="http://leo1.cc/categories/" title="Categories">
+                <a href="http://localhost:1313/categories/" title="Categories">
                     <span>Categories</span>
                 </a>
             </li>
             <li>
-                <a href="http://leo1.cc/tags/" title="Tags">
+                <a href="http://localhost:1313/tags/" title="Tags">
                     <span>Tags</span>
                 </a>
             </li>
             <li>
-                <a href="http://leo1.cc/search/" title="Search (Alt &#43; /)" accesskey=/>
+                <a href="http://localhost:1313/search/" title="Search (Alt &#43; /)" accesskey=/>
                     <span>Search</span>
                 </a>
             </li>
@@ -202,7 +176,7 @@
     </div>
   </div>
 
-  <a class="entry-link" aria-label="post link to UIUCTF24 - Pwnymalloc" href="http://leo1.cc/posts/writeups/uiuctf24-pwnymalloc/"></a>
+  <a class="entry-link" aria-label="post link to UIUCTF24 - Pwnymalloc" href="http://localhost:1313/posts/writeups/uiuctf24-pwnymalloc/"></a>
 </article>
 
 <article class="post-entry"> 
@@ -250,7 +224,7 @@
     </div>
   </div>
 
-  <a class="entry-link" aria-label="post link to Ret2dlresolve in 64bit binaries" href="http://leo1.cc/posts/docs/ret2dlresolve/"></a>
+  <a class="entry-link" aria-label="post link to Ret2dlresolve in 64bit binaries" href="http://localhost:1313/posts/docs/ret2dlresolve/"></a>
 </article>
 
 <article class="post-entry"> 
@@ -298,7 +272,7 @@
     </div>
   </div>
 
-  <a class="entry-link" aria-label="post link to CodegateJunior24 - Baby Heap" href="http://leo1.cc/posts/writeups/codegatejunior24-baby_heap/"></a>
+  <a class="entry-link" aria-label="post link to CodegateJunior24 - Baby Heap" href="http://localhost:1313/posts/writeups/codegatejunior24-baby_heap/"></a>
 </article>
 
 <article class="post-entry"> 
@@ -350,7 +324,7 @@
     </div>
   </div>
 
-  <a class="entry-link" aria-label="post link to OpenECSC Round 3 - Log4x86" href="http://leo1.cc/posts/writeups/openecscr3-log4x86/"></a>
+  <a class="entry-link" aria-label="post link to OpenECSC Round 3 - Log4x86" href="http://localhost:1313/posts/writeups/openecscr3-log4x86/"></a>
 </article>
 
 <article class="post-entry"> 
@@ -398,7 +372,7 @@
     </div>
   </div>
 
-  <a class="entry-link" aria-label="post link to DestructiveFarm setup for A/D CTFs" href="http://leo1.cc/posts/docs/destructivefarm_setup/"></a>
+  <a class="entry-link" aria-label="post link to DestructiveFarm setup for A/D CTFs" href="http://localhost:1313/posts/docs/destructivefarm_setup/"></a>
 </article>
 
 <article class="post-entry"> 
@@ -446,11 +420,11 @@
     </div>
   </div>
 
-  <a class="entry-link" aria-label="post link to Tulip setup for A/D CTFs" href="http://leo1.cc/posts/docs/tulip_setup/"></a>
+  <a class="entry-link" aria-label="post link to Tulip setup for A/D CTFs" href="http://localhost:1313/posts/docs/tulip_setup/"></a>
 </article>
 <footer class="page-footer">
   <nav class="pagination">
-    <a class="prev" href="http://leo1.cc/posts/page/2/">
+    <a class="prev" href="http://localhost:1313/posts/page/2/">
       «&nbsp;Prev&nbsp;
     </a>
   </nav>
@@ -458,17 +432,21 @@
     </main>
     
 <footer class="footer">
-        <span>&copy; 2026 <a href="http://leo1.cc/">leo_something</a></span> · 
+        <span>&copy; 2026 <a href="http://localhost:1313/">leo_something</a></span> · 
 
+    
+    
     <span>
         Powered by
-        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://gohugo.io/?utm_source=papermod" rel="noopener" target="_blank">Hugo</a> &
         <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
     </span>
 </footer>
-<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
-        <path d="M12 6H0l6-6z" />
+<a href="#top" id="top-link" class="top-link hidden" aria-label="go to top" title="Go to Top (Alt + G)" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round" class="feather feather-chevrons-up">
+        <polyline points="17 11 12 6 7 11"></polyline>
+        <polyline points="17 18 12 13 7 18"></polyline>
     </svg>
 </a><script src="https://cdnjs.cloudflare.com/ajax/libs/medium-zoom/1.0.6/medium-zoom.min.js" integrity="sha512-N9IJRoc3LaP3NDoiGkcPa4gG94kapGpaA5Zq9/Dr04uf5TbLFU5q0o8AbRhLKUUlp8QFS2u7S+Yti0U7QtuZvQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
@@ -486,25 +464,42 @@
 </script>
 
 <script>
-    let menu = document.getElementById('menu')
+    let menu = document.getElementById('menu');
     if (menu) {
-        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
-        menu.onscroll = function () {
-            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        
+        const scrollPosition = localStorage.getItem("menu-scroll-position");
+        if (scrollPosition) {
+            menu.scrollLeft = parseInt(scrollPosition, 10);
         }
+        
+        
+        let menuScrollTimeout;
+        menu.addEventListener("scroll", function () {
+            clearTimeout(menuScrollTimeout);
+            menuScrollTimeout = setTimeout(function () {
+                localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+            }, 150);
+        }, { passive: true });
     }
 
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener("click", function (e) {
             e.preventDefault();
             var id = this.getAttribute("href").substr(1);
+            const target = document.querySelector(`[id='${decodeURIComponent(id)}']`);
             if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                target.scrollIntoView({
                     behavior: "smooth"
                 });
             } else {
-                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+                target.scrollIntoView();
             }
+            
+            
+            if (target.tabIndex < 0 && !target.hasAttribute("tabindex")) {
+                target.setAttribute("tabindex", "-1");
+            }
+            target.focus({ preventScroll: true });
             if (id === "top") {
                 history.replaceState(null, null, " ");
             } else {
@@ -515,25 +510,31 @@
 
 </script>
 <script>
-    var mybutton = document.getElementById("top-link");
-    window.onscroll = function () {
-        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
-            mybutton.style.visibility = "visible";
-            mybutton.style.opacity = "1";
-        } else {
-            mybutton.style.visibility = "hidden";
-            mybutton.style.opacity = "0";
+    var toplink = document.getElementById("top-link");
+    var scrollTicking = false;
+    
+    window.addEventListener("scroll", function () {
+        if (scrollTicking) {
+            return;
         }
-    };
+        scrollTicking = true;
+        requestAnimationFrame(function () {
+            const scrollThreshold = window.innerHeight;
+            const shown = document.body.scrollTop > scrollThreshold || document.documentElement.scrollTop > scrollThreshold;
+            toplink.classList.toggle("hidden", !shown);
+            scrollTicking = false;
+        });
+    }, { passive: true });
 
 </script>
 <script>
     document.getElementById("theme-toggle").addEventListener("click", () => {
-        if (document.body.className.includes("dark")) {
-            document.body.classList.remove('dark');
+        const html = document.querySelector("html");
+        if (html.dataset.theme === "dark") {
+            html.dataset.theme = 'light';
             localStorage.setItem("pref-theme", 'light');
         } else {
-            document.body.classList.add('dark');
+            html.dataset.theme = 'dark';
             localStorage.setItem("pref-theme", 'dark');
         }
     })

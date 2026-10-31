@@ -1,24 +1,24 @@
 <!DOCTYPE html>
-<html lang="en" dir="auto">
+<html lang="en" dir="auto" data-theme="auto">
 
-<head><meta charset="utf-8">
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script><meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<meta name="robots" content="index, follow">
+<meta name="robots" content="noindex, nofollow">
 <title>Ret2dlresolve in 64bit binaries | leo_something</title>
 <meta name="keywords" content="ret2dlresolve">
 <meta name="description" content="Ret2dlresolve is a really powerful tecnique to use in pwn challenges (even tho it&rsquo;s not frequently seen). It&rsquo;s useful when we don&rsquo;t have libc leaks or don&rsquo;t know the libc version.">
 <meta name="author" content="leo_something">
-<link rel="canonical" href="http://leo1.cc/posts/docs/ret2dlresolve/">
-<link crossorigin="anonymous" href="/assets/css/stylesheet.62bb6a5e71ed8590b51185096e2d3dea8379889277e03fcf9ef8a01b0f6d9dc0.css" integrity="sha256-YrtqXnHthZC1EYUJbi096oN5iJJ34D/PnvigGw9tncA=" rel="preload stylesheet" as="style">
-<link rel="icon" href="http://leo1.cc/favicon.ico">
-<link rel="icon" type="image/png" sizes="16x16" href="http://leo1.cc/favicon-16x16.png">
-<link rel="icon" type="image/png" sizes="32x32" href="http://leo1.cc/favicon-32x32.png">
-<link rel="apple-touch-icon" href="http://leo1.cc/apple-touch-icon.png">
-<link rel="mask-icon" href="http://leo1.cc/safari-pinned-tab.svg">
+<link rel="canonical" href="http://localhost:1313/posts/docs/ret2dlresolve/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.fbac6695f4a8cddd92d37781d10dd91c1cce98cdc1aab7b4eb16ad28eefe81a7.css" integrity="sha256-&#43;6xmlfSozd2S03eB0Q3ZHBzOmM3Bqre06xatKO7&#43;gac=" rel="preload stylesheet" as="style">
+<link rel="icon" href="http://localhost:1313/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="http://localhost:1313/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="http://localhost:1313/favicon-32x32.png">
+<link rel="apple-touch-icon" href="http://localhost:1313/apple-touch-icon.png">
+<link rel="mask-icon" href="http://localhost:1313/safari-pinned-tab.svg">
 <meta name="theme-color" content="#2e2e33">
 <meta name="msapplication-TileColor" content="#2e2e33">
-<link rel="alternate" hreflang="en" href="http://leo1.cc/posts/docs/ret2dlresolve/">
+<link rel="alternate" hreflang="en" href="http://localhost:1313/posts/docs/ret2dlresolve/">
 <noscript>
     <style>
         #theme-toggle,
@@ -39,117 +39,47 @@
                 --code-block-bg: rgb(46, 46, 51);
                 --code-bg: rgb(55, 56, 62);
                 --border: rgb(51, 51, 51);
+                color-scheme: dark;
             }
 
             .list {
                 background: var(--theme);
             }
 
-            .list:not(.dark)::-webkit-scrollbar-track {
-                background: 0 0;
-            }
-
-            .list:not(.dark)::-webkit-scrollbar-thumb {
-                border-color: var(--theme);
+            .toc {
+                background: var(--entry);
             }
         }
 
     </style>
-</noscript><script data-goatcounter="https://leo1.goatcounter.com/count"
-        async src="//gc.zgo.at/count.js"></script>
-<meta property="og:url" content="http://leo1.cc/posts/docs/ret2dlresolve/">
-  <meta property="og:site_name" content="leo_something">
-  <meta property="og:title" content="Ret2dlresolve in 64bit binaries">
-  <meta property="og:description" content="Ret2dlresolve is a really powerful tecnique to use in pwn challenges (even tho it’s not frequently seen). It’s useful when we don’t have libc leaks or don’t know the libc version.">
-  <meta property="og:locale" content="en-us">
-  <meta property="og:type" content="article">
-    <meta property="article:section" content="posts">
-    <meta property="article:published_time" content="2024-06-12T12:00:00+00:00">
-    <meta property="article:modified_time" content="2024-06-12T12:00:00+00:00">
-    <meta property="article:tag" content="Ret2dlresolve">
-<meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Ret2dlresolve in 64bit binaries">
-<meta name="twitter:description" content="Ret2dlresolve is a really powerful tecnique to use in pwn challenges (even tho it&rsquo;s not frequently seen). It&rsquo;s useful when we don&rsquo;t have libc leaks or don&rsquo;t know the libc version.">
-
-
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "BreadcrumbList",
-  "itemListElement": [
-    {
-      "@type": "ListItem",
-      "position":  1 ,
-      "name": "Posts",
-      "item": "http://leo1.cc/posts/"
-    }, 
-    {
-      "@type": "ListItem",
-      "position":  2 ,
-      "name": "Ret2dlresolve in 64bit binaries",
-      "item": "http://leo1.cc/posts/docs/ret2dlresolve/"
-    }
-  ]
-}
-</script>
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "BlogPosting",
-  "headline": "Ret2dlresolve in 64bit binaries",
-  "name": "Ret2dlresolve in 64bit binaries",
-  "description": "Ret2dlresolve is a really powerful tecnique to use in pwn challenges (even tho it\u0026rsquo;s not frequently seen). It\u0026rsquo;s useful when we don\u0026rsquo;t have libc leaks or don\u0026rsquo;t know the libc version.",
-  "keywords": [
-    "ret2dlresolve"
-  ],
-  "articleBody": "Overview Use a the function _dl_runtime_resolve_xsavec ( link_map , reloc_arg ) to relocate an arbitrary symbol (e.g. system) and call that function.\nStructures There are 3 struct that handle the relocation process: JMPREL, STRTAB, DYNSYM.\nJMPREL (.rela.plt) This stores a relocation table\nLOAD:04005C0 ; ELF JMPREL Relocation Table LOAD:04005C0 Elf64_Rela \u003c404018h, 200000007h, 0\u003e ; R_X86_64_JUMP_SLOT write LOAD:04005D8 Elf64_Rela \u003c404020h, 300000007h, 0\u003e ; R_X86_64_JUMP_SLOT strlen LOAD:04005F0 Elf64_Rela \u003c404028h, 400000007h, 0\u003e ; R_X86_64_JUMP_SLOT setbuf LOAD:0400608 Elf64_Rela \u003c404030h, 500000007h, 0\u003e ; R_X86_64_JUMP_SLOT read example of relocation table\nThe type of these entries is Elf64_Rela, which is defined as follows. The size of one entry is 24 bytes.\ntypedef struct { Elf64_Addr r_offset; /* 64 bit - Address */ Elf64_Xword r_info; /* 64 bit - Relocation type and symbol index */ Elf64_Sxword r_addend; /* 64 bit - Addend */ } Elf64_Rela; // 24 bytes /* How to extract and insert information held in the r_info field.*/ #define ELF64_R_SYM(i) ((i) \u003e\u003e 32) #define ELF64_R_TYPE(i) ((i) \u0026 0xffffffff) #define ELF64_R_INFO(sym,type) ((((Elf64_Xword) (sym)) \u003c\u003c 32) + (type)) ELF64_R_SYM(r_info) gives the index of the Elf64_Sym in DYNSYM for the specified symbol. ELF64_R_TYPE(r_info) must be equal to 7. DYNSYM (.dynsym) LOAD:04003D8 ; ELF Symbol Table LOAD:04003D8 Elf64_Sym \u003c0\u003e LOAD:04003F0 Elf64_Sym ; \"__libc_start_main\" LOAD:0400408 Elf64_Sym ; \"write\" LOAD:0400420 Elf64_Sym ; \"strlen\" LOAD:0400438 Elf64_Sym ; \"setbuf\" LOAD:0400450 Elf64_Sym ; \"read\" example of symbol table\nThis table holds relevant symbol information. Each entry is a Elf32_Sym structure and its size is 24 bytes.\ntypedef struct { Elf64_Word st_name; /* 32bit - Symbol name (string tbl index) */ unsigned char st_info; /* Symbol type and binding */ unsigned char st_other; /* Symbol visibility */ Elf64_Section st_shndx; /* 16 bits - Section index */ Elf64_Addr st_value; /* 64 bits - Symbol value */ Elf64_Xword st_size; /* 64 bits - Symbol size */ } Elf64_Sym; // 24 bytes Only st_name is important for the exploit.\nSTRTAB (.dynstr) STRTAB is a simple table that stores the strings for symbols name.\n0x804822c:\t\"\" 0x804822d:\t\"libc.so.6\" 0x8048237:\t\"_IO_stdin_used\" 0x8048246:\t\"read\" 0x804824b:\t\"alarm\" 0x8048251:\t\"__libc_start_main\" 0x8048263:\t\"__gmon_start__\" 0x8048272:\t\"GLIBC_2.0\" example of STRTAB\nSummary of GDB commands Get JMPREL:\ngef➤ x/3xg (JMPREL) + (reloc_arg) * 24\nsymbol_number = r_info » 32\ntype = r_info \u0026 0xffffffff\nGet SYMTAB:\ngef➤ x/3xg (SYMTAB) + (symbol_number) * 24\nGet STRTAB:\ngef➤ x/s (STRTAB) + (st_name)\nRelocation summary A typical relocation goes as follows:\nCall _dl_runtime_resolve_xsavec ( link_map , reloc_arg ) where link_map is a list with all the loaded libraries and reloc_arg is the offset of the Elf64_Rela entry in JMPREL Knowing the address of the Elf36_Rela for the specified symbol get r_info Get R_SYM with `r_info » 32 (ELF64_R_SYM macro) Get st_name from the Elf64_Sym entry with DYNSYM + R_SYM*24 Get the symbol with STRTAB + st_name Search for that symbol in link_map and then write its address to the correct GOT entry using r_offset from Elf64_Rela Finally call the relocated function EXPLOIT Forge Elf64_Rela so that DYNSYM + (r_info\u003e\u003e8)*24 points to a forged Elf64_Sym Forge Elf64_Sym so that st_name points to \"system\" Call _dl_runtime_resolve ( link_map , rel_offset ) ",
-  "wordCount" : "558",
-  "inLanguage": "en",
-  "datePublished": "2024-06-12T12:00:00Z",
-  "dateModified": "2024-06-12T12:00:00Z",
-  "author":{
-    "@type": "Person",
-    "name": "leo_something"
-  },
-  "mainEntityOfPage": {
-    "@type": "WebPage",
-    "@id": "http://leo1.cc/posts/docs/ret2dlresolve/"
-  },
-  "publisher": {
-    "@type": "Organization",
-    "name": "leo_something",
-    "logo": {
-      "@type": "ImageObject",
-      "url": "http://leo1.cc/favicon.ico"
-    }
-  }
-}
-</script>
-</head>
-
-<body class="" id="top">
+</noscript>
 <script>
     if (localStorage.getItem("pref-theme") === "dark") {
-        document.body.classList.add('dark');
+        document.querySelector("html").dataset.theme = 'dark';
     } else if (localStorage.getItem("pref-theme") === "light") {
-        document.body.classList.remove('dark')
+       document.querySelector("html").dataset.theme = 'light';
     } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        document.body.classList.add('dark');
+        document.querySelector("html").dataset.theme = 'dark';
+    } else {
+        document.querySelector("html").dataset.theme = 'light';
     }
 
-</script>
+</script><script data-goatcounter="https://leo1.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
 
-<header class="header">
-    <nav class="nav">
+</head>
+<body id="top">
+    <header class="header">
+    <nav class="header-nav">
         <div class="logo">
             <div class="logo-switches">
-                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
-                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                <button id="theme-toggle" class="theme-toggle" accesskey="t" title="(Alt + T)" aria-label="Toggle theme">
+                    <svg class="moon" xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24"
                         fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                         stroke-linejoin="round">
                         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
                     </svg>
-                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                    <svg class="sun" xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24"
                         fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                         stroke-linejoin="round">
                         <circle cx="12" cy="12" r="5"></circle>
@@ -165,24 +95,24 @@
                 </button>
             </div>
         </div>
-        <ul id="menu">
+        <ul id="menu" class="menu">
             <li>
-                <a href="http://leo1.cc/" title="Home">
+                <a href="http://localhost:1313/" title="Home">
                     <span>Home</span>
                 </a>
             </li>
             <li>
-                <a href="http://leo1.cc/categories/" title="Categories">
+                <a href="http://localhost:1313/categories/" title="Categories">
                     <span>Categories</span>
                 </a>
             </li>
             <li>
-                <a href="http://leo1.cc/tags/" title="Tags">
+                <a href="http://localhost:1313/tags/" title="Tags">
                     <span>Tags</span>
                 </a>
             </li>
             <li>
-                <a href="http://leo1.cc/search/" title="Search (Alt &#43; /)" accesskey=/>
+                <a href="http://localhost:1313/search/" title="Search (Alt &#43; /)" accesskey=/>
                     <span>Search</span>
                 </a>
             </li>
@@ -237,38 +167,36 @@
     </div>
   </div>
 
-  <div style="height: var(--gap);"></div> <div class="toc">
-    <details >
-        <summary accesskey="c" title="(Alt + C)">
-            <span class="details">Table of Contents</span>
-        </summary>
+  <div style="height: var(--gap);"></div> <details class="toc" >
+    <summary accesskey="c" title="(Alt + C)">
+        <span class="title">Table of Contents</span>
+    </summary>
 
-        <div class="inner"><ul>
-                <li>
-                    <a href="#overview" aria-label="Overview">Overview</a></li>
-                <li>
-                    <a href="#structures" aria-label="Structures">Structures</a><ul>
-                        <ul>
-                        
-                <li>
-                    <a href="#jmprel-relaplt" aria-label="JMPREL (.rela.plt)">JMPREL (.rela.plt)</a></li>
-                <li>
-                    <a href="#dynsym-dynsym" aria-label="DYNSYM (.dynsym)">DYNSYM (.dynsym)</a></li>
-                <li>
-                    <a href="#strtab-dynstr" aria-label="STRTAB (.dynstr)">STRTAB (.dynstr)</a></li></ul>
-                    </ul>
-                </li>
-                <li>
-                    <a href="#summary-of-gdb-commands" aria-label="Summary of GDB commands">Summary of GDB commands</a></li>
-                <li>
-                    <a href="#relocation-summary" aria-label="Relocation summary">Relocation summary</a></li>
-                <li>
-                    <a href="#exploit" aria-label="EXPLOIT">EXPLOIT</a>
-                </li>
-            </ul>
-        </div>
-    </details>
-</div>
+    <div class="inner"><ul>
+            <li>
+                <a href="#overview" aria-label="Overview">Overview</a></li>
+            <li>
+                <a href="#structures" aria-label="Structures">Structures</a><ul>
+                    <ul>
+                    
+            <li>
+                <a href="#jmprel-relaplt" aria-label="JMPREL (.rela.plt)">JMPREL (.rela.plt)</a></li>
+            <li>
+                <a href="#dynsym-dynsym" aria-label="DYNSYM (.dynsym)">DYNSYM (.dynsym)</a></li>
+            <li>
+                <a href="#strtab-dynstr" aria-label="STRTAB (.dynstr)">STRTAB (.dynstr)</a></li></ul>
+                </ul>
+            </li>
+            <li>
+                <a href="#summary-of-gdb-commands" aria-label="Summary of GDB commands">Summary of GDB commands</a></li>
+            <li>
+                <a href="#relocation-summary" aria-label="Relocation summary">Relocation summary</a></li>
+            <li>
+                <a href="#exploit" aria-label="EXPLOIT">EXPLOIT</a>
+            </li>
+        </ul>
+    </div>
+</details>
 
   <div class="post-content"><h3 id="overview">Overview<a hidden class="anchor" aria-hidden="true" href="#overview">#</a></h3>
 <p>Use a the function <code>_dl_runtime_resolve_xsavec ( link_map , reloc_arg )</code> to relocate an arbitrary symbol (e.g. <code>system</code>) and call that function.</p>
@@ -284,13 +212,13 @@ LOAD:04005F0 Elf64_Rela &lt;404028h, 400000007h, 0&gt; ; R_X86_64_JUMP_SLOT setb
 LOAD:0400608 Elf64_Rela &lt;404030h, 500000007h, 0&gt; ; R_X86_64_JUMP_SLOT read
 </code></pre><p><em>example of relocation table</em></p>
 <p>The type of these entries is <code>Elf64_Rela</code>, which is defined as follows. The size of one entry is 24 bytes.</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">typedef</span> <span style="color:#66d9ef">struct</span>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">typedef</span> <span style="color:#66d9ef">struct</span>
 </span></span><span style="display:flex;"><span>{
 </span></span><span style="display:flex;"><span>  Elf64_Addr        r_offset;    <span style="color:#75715e">/* 64 bit - Address */</span>
 </span></span><span style="display:flex;"><span>  Elf64_Xword       r_info;      <span style="color:#75715e">/* 64 bit - Relocation type and symbol index */</span>
 </span></span><span style="display:flex;"><span>  Elf64_Sxword      r_addend;    <span style="color:#75715e">/* 64 bit - Addend */</span>
 </span></span><span style="display:flex;"><span>} Elf64_Rela; <span style="color:#75715e">// 24 bytes
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#75715e">/* How to extract and insert information held in the r_info field.*/</span>
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">/* How to extract and insert information held in the r_info field.*/</span>
 </span></span><span style="display:flex;"><span><span style="color:#75715e">#define ELF64_R_SYM(i)         ((i) &gt;&gt; 32)
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">#define ELF64_R_TYPE(i)        ((i) &amp; 0xffffffff)
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e">#define ELF64_R_INFO(sym,type) ((((Elf64_Xword) (sym)) &lt;&lt; 32) + (type))
@@ -308,7 +236,7 @@ LOAD:0400438 Elf64_Sym &lt;offset aSetbuf - offset unk_4004B0, 12h, 0, 0, 0, 0&g
 LOAD:0400450 Elf64_Sym &lt;offset aRead - offset unk_4004B0, 12h, 0, 0, 0, 0&gt; ; &#34;read&#34;
 </code></pre><p><em>example of symbol table</em></p>
 <p>This table holds relevant symbol information. Each entry is a <code>Elf32_Sym</code> structure and its size is 24 bytes.</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">typedef</span> <span style="color:#66d9ef">struct</span>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">typedef</span> <span style="color:#66d9ef">struct</span>
 </span></span><span style="display:flex;"><span>{
 </span></span><span style="display:flex;"><span>  Elf64_Word     st_name;    <span style="color:#75715e">/* 32bit - Symbol name (string tbl index) */</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">char</span>  st_info;    <span style="color:#75715e">/* Symbol type and binding */</span>
@@ -375,17 +303,21 @@ type = r_info &amp; 0xffffffff</p>
     </main>
     
 <footer class="footer">
-        <span>&copy; 2026 <a href="http://leo1.cc/">leo_something</a></span> · 
+        <span>&copy; 2026 <a href="http://localhost:1313/">leo_something</a></span> · 
 
+    
+    
     <span>
         Powered by
-        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://gohugo.io/?utm_source=papermod" rel="noopener" target="_blank">Hugo</a> &
         <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
     </span>
 </footer>
-<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
-        <path d="M12 6H0l6-6z" />
+<a href="#top" id="top-link" class="top-link hidden" aria-label="go to top" title="Go to Top (Alt + G)" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round" class="feather feather-chevrons-up">
+        <polyline points="17 11 12 6 7 11"></polyline>
+        <polyline points="17 18 12 13 7 18"></polyline>
     </svg>
 </a><script src="https://cdnjs.cloudflare.com/ajax/libs/medium-zoom/1.0.6/medium-zoom.min.js" integrity="sha512-N9IJRoc3LaP3NDoiGkcPa4gG94kapGpaA5Zq9/Dr04uf5TbLFU5q0o8AbRhLKUUlp8QFS2u7S+Yti0U7QtuZvQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
@@ -403,25 +335,42 @@ type = r_info &amp; 0xffffffff</p>
 </script>
 
 <script>
-    let menu = document.getElementById('menu')
+    let menu = document.getElementById('menu');
     if (menu) {
-        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
-        menu.onscroll = function () {
-            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        
+        const scrollPosition = localStorage.getItem("menu-scroll-position");
+        if (scrollPosition) {
+            menu.scrollLeft = parseInt(scrollPosition, 10);
         }
+        
+        
+        let menuScrollTimeout;
+        menu.addEventListener("scroll", function () {
+            clearTimeout(menuScrollTimeout);
+            menuScrollTimeout = setTimeout(function () {
+                localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+            }, 150);
+        }, { passive: true });
     }
 
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener("click", function (e) {
             e.preventDefault();
             var id = this.getAttribute("href").substr(1);
+            const target = document.querySelector(`[id='${decodeURIComponent(id)}']`);
             if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                target.scrollIntoView({
                     behavior: "smooth"
                 });
             } else {
-                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+                target.scrollIntoView();
             }
+            
+            
+            if (target.tabIndex < 0 && !target.hasAttribute("tabindex")) {
+                target.setAttribute("tabindex", "-1");
+            }
+            target.focus({ preventScroll: true });
             if (id === "top") {
                 history.replaceState(null, null, " ");
             } else {
@@ -432,25 +381,31 @@ type = r_info &amp; 0xffffffff</p>
 
 </script>
 <script>
-    var mybutton = document.getElementById("top-link");
-    window.onscroll = function () {
-        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
-            mybutton.style.visibility = "visible";
-            mybutton.style.opacity = "1";
-        } else {
-            mybutton.style.visibility = "hidden";
-            mybutton.style.opacity = "0";
+    var toplink = document.getElementById("top-link");
+    var scrollTicking = false;
+    
+    window.addEventListener("scroll", function () {
+        if (scrollTicking) {
+            return;
         }
-    };
+        scrollTicking = true;
+        requestAnimationFrame(function () {
+            const scrollThreshold = window.innerHeight;
+            const shown = document.body.scrollTop > scrollThreshold || document.documentElement.scrollTop > scrollThreshold;
+            toplink.classList.toggle("hidden", !shown);
+            scrollTicking = false;
+        });
+    }, { passive: true });
 
 </script>
 <script>
     document.getElementById("theme-toggle").addEventListener("click", () => {
-        if (document.body.className.includes("dark")) {
-            document.body.classList.remove('dark');
+        const html = document.querySelector("html");
+        if (html.dataset.theme === "dark") {
+            html.dataset.theme = 'light';
             localStorage.setItem("pref-theme", 'light');
         } else {
-            document.body.classList.add('dark');
+            html.dataset.theme = 'dark';
             localStorage.setItem("pref-theme", 'dark');
         }
     })
